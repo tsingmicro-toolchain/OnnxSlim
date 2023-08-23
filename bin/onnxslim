@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+
+G_SCRIPT_FILE = os.path.realpath(__file__)
+G_ROOT_DIR = os.path.join(os.path.dirname(G_SCRIPT_FILE), os.pardir)
+sys.path.insert(0, G_ROOT_DIR)
+
+
+from onnxslim import cli
+
+if __name__ == "__main__":
+    sys.exit(cli.main())
