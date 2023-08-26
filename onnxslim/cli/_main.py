@@ -15,15 +15,16 @@ def main():
         "-v", "--version", action="version", version="0.0.1"
     )
 
-    args, unknown = parser.parse_known_args()
-
-    if unknown:
+    args, unknown = parser.parse_known_args()       
+                 
+    if unknown:                                                                                                                                                                                                                                                                                                                                                                                          
         logger.error(f"Unrecognized Options: {unknown}")
         return 1
 
     slimmer = OnnxSlim(args.input_model)
     slimmer.shape_infer()
     slimmer.slim()
+    # slimmer.convert_data_format()
     slimmer.summary()
     slimmer.save(args.output_model)
 
