@@ -1,8 +1,6 @@
-__version__ = "0.0.2"
-
 import os
 import warnings
-
+from .version import __version__
 
 if os.path.dirname(os.path.realpath(__file__)) == os.path.join(
     os.path.realpath(os.getcwd()), "onnxslim"

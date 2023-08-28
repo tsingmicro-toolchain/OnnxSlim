@@ -1,10 +1,14 @@
 from setuptools import find_packages, setup
-import onnxslim
 
+with open('VERSION', 'r') as f:
+    version = f.read().strip()
+
+with open('onnxslim/version.py', 'w') as f:
+    f.write(f'__version__ = "{version}"\n')
 
 setup(
     name="onnxslim",
-    version=onnxslim.__version__,
+    version=version,
     description="OnnxSlim: A Toolkit to Help Optimizer Onnx Model",
     long_description=open("README.md", "r", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
