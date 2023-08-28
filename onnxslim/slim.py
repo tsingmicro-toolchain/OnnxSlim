@@ -1,11 +1,14 @@
 import sys
 import onnx
+from onnx import checker
+import numpy as np
 from tabulate import tabulate, SEPARATING_LINE
 import onnx_graphsurgeon as gs
 from onnx_graphsurgeon.logger.logger import G_LOGGER
 
 from loguru import logger
 from .utils.font import GREEN, WHITE
+from .utils.utils import format_bytes
 
 class OnnxSlim():
     def __init__(self, model, log_level=1):
@@ -28,17 +31,27 @@ class OnnxSlim():
         
         G_LOGGER.severity = G_LOGGER.ERROR
         
-    def shape_infer(self):
-        self.model = onnx.shape_inference.infer_shapes(self.model, strict_mode=False, data_prop=True)
+    def shape_infer(self, data_prop=True):
+        self.model = onnx.shape_inference.infer_shapes(self.model, strict_mode=False, data_prop=data_prop)
 
     def slim(self):
-        self.graph = gs.import_onnx(self.model).toposort()
-        self.graph.fold_constants().cleanup().toposort()
-        self.model = gs.export_onnx(self.graph)
+        graph = gs.import_onnx(self.model).toposort()
+        graph.fold_constants().cleanup().toposort()
+        self.model = gs.export_onnx(graph)
 
-    def convert_data_format(self):
+    def convert_data_format(self, dtype):
         from onnxconverter_common import float16
-        self.model = float16.convert_float_to_float16(self.model)
+        if dtype == 'fp16':
+            self.model = float16.convert_float_to_float16(self.model)
+        elif dtype == 'fp32':
+            graph = gs.import_onnx(self.model).toposort()
+            for tensor in graph.tensors().values():
+                if isinstance(tensor, gs.Variable) and tensor.dtype == np.float16:
+                    tensor.dtype = np.float32
+                elif isinstance(tensor, gs.Constant) and tensor.dtype == np.float16:
+                    tensor.values = tensor.values.astype(np.float32)
+
+        self.model = gs.export_onnx(graph)
 
     def summary(self):
         self.slimmed_info = self.summarize(self.model)
@@ -52,8 +65,10 @@ class OnnxSlim():
                 slimmed_number = GREEN+str(slimmed_number)+WHITE
             final_op_info.append([op, float_number, slimmed_number])
         final_op_info.append([SEPARATING_LINE, SEPARATING_LINE, SEPARATING_LINE])
-        final_op_info.append(["model_size", self.float_info["model_size"], self.slimmed_info["model_size"]])
-        lines = tabulate(final_op_info,headers=["OP_TYPE", "Original Model", "Slimmed Model"], tablefmt="pretty").split('\n')
+        final_op_info.append(["model_size", format_bytes(self.float_info["model_size"]),
+                                            format_bytes(self.slimmed_info["model_size"])])
+        lines = tabulate(final_op_info, headers=["OP_TYPE", "Original Model", "Slimmed Model"],
+                         tablefmt="pretty").split('\n')
         output = "\n".join([line if line !='| \x01 |' else lines[0] for line in lines])
 
         logger.info(WHITE+"\n" + output)
@@ -77,5 +92,7 @@ class OnnxSlim():
 
         return model_info             
 
-    def save(self, model_path):
+    def save(self, model_path, no_model_check):
+        if not no_model_check:
+            checker.check_model(self.model)
         onnx.save(self.model, model_path)
