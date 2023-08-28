@@ -2,6 +2,7 @@ def main():
     import sys    
     import argparse
     from loguru import logger
+    import onnxslim
     from onnxslim.slim import OnnxSlim
 
     common_parser = argparse.ArgumentParser(add_help=False)
@@ -14,7 +15,7 @@ def main():
     parser.add_argument("output_model", help="Output onnx model")
     parser.add_argument("--no_model_check", action="store_true", help="Disable model check")
     parser.add_argument(
-        "-v", "--version", action="version", version="0.0.1"
+        "-v", "--version", action="version", version=onnxslim.__version__
     )
     subparsers = parser.add_subparsers(title="Optimization", dest="optimization")
     
