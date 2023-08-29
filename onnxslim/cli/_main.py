@@ -44,7 +44,7 @@ def main():
             data_prop = True
         slimmer.shape_infer(data_prop)
 
-    if args.optimization == None or args.constant_folding:
+    if args.optimization == None or args.constant_folding == 'enable':
         slimmer.slim()
 
     if args.optimization and args.dtype:

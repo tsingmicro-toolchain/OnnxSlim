@@ -40,8 +40,8 @@ class OnnxSlim():
         self.model = gs.export_onnx(graph)
 
     def convert_data_format(self, dtype):
-        from onnxconverter_common import float16
         if dtype == 'fp16':
+            from onnxconverter_common import float16
             self.model = float16.convert_float_to_float16(self.model)
         elif dtype == 'fp32':
             graph = gs.import_onnx(self.model).toposort()
