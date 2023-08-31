@@ -38,7 +38,7 @@ def main():
     slimmer = OnnxSlim(args.input_model)
     if args.optimization == None:
         slimmer.shape_infer()
-    elif args.shape_infer:
+    elif args.shape_infer == 'enable':
         data_prop = False
         if args.data_prop == 'enable':
             data_prop = True
