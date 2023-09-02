@@ -76,7 +76,7 @@ class OnnxSlim():
     def summarize(self, model):
         model_info = {}        
         
-        model_size = sys.getsizeof(model.SerializeToString())
+        model_size = model.ByteSize()
         model_info["model_size"] = model_size
         
         op_type_counts = {}
@@ -94,5 +94,20 @@ class OnnxSlim():
 
     def save(self, model_path, no_model_check):
         if not no_model_check:
-            checker.check_model(self.model)
-        onnx.save(self.model, model_path)
+            try:
+                checker.check_model(self.model)
+            except ValueError:
+                logger.warning("Model too large and cannot be checked.")
+            
+        try:
+            onnx.save(self.model, model_path)
+        except ValueError:
+            import os
+            onnx.save(
+                self.model,
+                model_path,
+                save_as_external_data=True,
+                all_tensors_to_one_file=True,
+                location=os.path.basename(model_path) + '.data',
+            )
+            logger.warning("Model too large and saved as external data automatically.")
