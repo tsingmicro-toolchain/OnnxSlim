@@ -20,6 +20,8 @@ def main():
     subparsers = parser.add_subparsers(title="Optimization", dest="optimization")
     
     optimization_parser = subparsers.add_parser("optimization", help="Perform Optimization")
+    # Input Shape Modification
+    optimization_parser.add_argument("--input_shapes", nargs="+", type=str, help="Input shape of the model, e.g. 1,3,224,224")
     # Shape Inference
     optimization_parser.add_argument("--shape_infer", choices=['enable', 'disable'], default="enable", help="Whether to enable shape_infer, default enable")  
     optimization_parser.add_argument("--data_prop", choices=['enable', 'disable'], default="enable", help="Whether to do data_prop, default enable")  
@@ -35,7 +37,13 @@ def main():
         logger.error(f"Unrecognized Options: {unknown}")
         return 1
 
-    slimmer = OnnxSlim(args.input_model, no_model_check=args.no_model_check)
+    slimmer = OnnxSlim(args.input_model)
+    if args.optimization and args.input_shapes:
+        slimmer.input_shape_modification(args.input_shapes)
+
+    if not args.no_model_check:
+        slimmer.check_point()
+
     if args.optimization == None:
         slimmer.shape_infer()
     elif args.shape_infer == 'enable':
@@ -50,6 +58,6 @@ def main():
     if args.optimization and args.dtype:
         slimmer.convert_data_format(args.dtype)
     slimmer.summary()
-    slimmer.save(args.output_model)
+    slimmer.save(args.output_model, args.no_model_check)
 
     return 0

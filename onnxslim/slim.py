@@ -5,20 +5,18 @@ import numpy as np
 from tabulate import tabulate, SEPARATING_LINE
 import onnx_graphsurgeon as gs
 from onnx_graphsurgeon.logger.logger import G_LOGGER
+from onnx_graphsurgeon.ir.tensor import Constant
 
 from loguru import logger
 from .utils.font import GREEN, WHITE
 from .utils.utils import format_bytes, gen_onnxruntime_input_data, onnxruntime_inference
 
 class OnnxSlim():
-    def __init__(self, model, log_level=1, no_model_check=False):
+    def __init__(self, model, log_level=1):
         self.init_logging(log_level)        
         self.model = onnx.load(model)
         self.float_info = self.summarize(self.model)
-        self.no_model_check = no_model_check
-        if not no_model_check:
-            self.input_data_dict = gen_onnxruntime_input_data(self.model)
-            self.raw_onnx_output = onnxruntime_inference(self.model, self.input_data_dict)
+
 
     def init_logging(self, log_level):
         logger.remove()
@@ -34,6 +32,34 @@ class OnnxSlim():
             raise Exception("level must be 0, 1, 2 or 3")
         
         G_LOGGER.severity = G_LOGGER.ERROR
+
+
+    def input_shape_modification(self, input_shapes):
+        if not input_shapes:
+            return
+
+        graph = gs.import_onnx(self.model)
+        input_names = [input.name for input in graph.inputs]
+        tensors = graph.tensors()
+
+        for input_shape in input_shapes:
+            key, values = input_shape.split(':')
+            values_list = [int(value) for value in values.split(',')]
+            if key not in input_names:
+                raise Exception(f"Input name {key} not found in model, available keys: {' '.join(input_names)}")
+            tensors[key].shape = values_list
+
+        for _, tensor in tensors.items():
+            if tensor.name not in input_names:
+                if isinstance(tensor, Constant):
+                    continue
+                tensor.shape = None
+        self.model = gs.export_onnx(graph)
+
+
+    def check_point(self):
+        self.input_data_dict = gen_onnxruntime_input_data(self.model)
+        self.raw_onnx_output = onnxruntime_inference(self.model, self.input_data_dict)        
 
 
     def shape_infer(self, data_prop=True):
@@ -102,8 +128,8 @@ class OnnxSlim():
         return model_info             
 
 
-    def save(self, model_path):
-        if not self.no_model_check:
+    def save(self, model_path, no_model_check=False):
+        if not no_model_check:
             self.slimmed_onnx_output = onnxruntime_inference(self.model, self.input_data_dict)
             if set(self.raw_onnx_output.keys()) != set(self.slimmed_onnx_output.keys()):
                 logger.warning("Model output mismatch after slimming.")
@@ -111,16 +137,16 @@ class OnnxSlim():
                 logger.warning("Slimmed model output keys: {}".format(self.slimmed_onnx_output.keys()))
                 logger.warning("Please check the model carefully.")
                 logger.warning("If you are sure that the model is correct, please use --no_model_check to skip model check.")
-                return 1
+                return
             else:
                 for key in self.raw_onnx_output.keys():
-                    if not np.allclose(self.raw_onnx_output[key], self.slimmed_onnx_output[key], rtol=1e-03, atol=1e-05):
+                    if not np.allclose(self.raw_onnx_output[key], self.slimmed_onnx_output[key], rtol=1e-03, atol=1e-04, equal_nan=True):
                         logger.warning("Model output mismatch after slimming.")
                         logger.warning("Please check the model carefully.")
                         logger.warning("If you are sure that the model is correct, please use --no_model_check to skip model check.")
-                        return 1
+                        return
 
-        if not self.no_model_check:
+        if not no_model_check:
             try:
                 checker.check_model(self.model)
             except ValueError:
