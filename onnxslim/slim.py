@@ -8,13 +8,17 @@ from onnx_graphsurgeon.logger.logger import G_LOGGER
 
 from loguru import logger
 from .utils.font import GREEN, WHITE
-from .utils.utils import format_bytes
+from .utils.utils import format_bytes, gen_onnxruntime_input_data, onnxruntime_inference
 
 class OnnxSlim():
-    def __init__(self, model, log_level=1):
+    def __init__(self, model, log_level=1, no_model_check=False):
+        self.init_logging(log_level)        
         self.model = onnx.load(model)
         self.float_info = self.summarize(self.model)
-        self.init_logging(log_level)
+        self.no_model_check = no_model_check
+        if not no_model_check:
+            self.input_data_dict = gen_onnxruntime_input_data(self.model)
+            self.raw_onnx_output = onnxruntime_inference(self.model, self.input_data_dict)
 
     def init_logging(self, log_level):
         logger.remove()
@@ -30,14 +34,17 @@ class OnnxSlim():
             raise Exception("level must be 0, 1, 2 or 3")
         
         G_LOGGER.severity = G_LOGGER.ERROR
-        
+
+
     def shape_infer(self, data_prop=True):
         self.model = onnx.shape_inference.infer_shapes(self.model, strict_mode=False, data_prop=data_prop)
+
 
     def slim(self):
         graph = gs.import_onnx(self.model).toposort()
         graph.fold_constants().cleanup().toposort()
         self.model = gs.export_onnx(graph)
+
 
     def convert_data_format(self, dtype):
         if dtype == 'fp16':
@@ -52,6 +59,7 @@ class OnnxSlim():
                     tensor.values = tensor.values.astype(np.float32)
 
         self.model = gs.export_onnx(graph)
+
 
     def summary(self):
         self.slimmed_info = self.summarize(self.model)
@@ -73,6 +81,7 @@ class OnnxSlim():
 
         logger.info(WHITE+"\n" + output)
 
+
     def summarize(self, model):
         model_info = {}        
         
@@ -92,8 +101,26 @@ class OnnxSlim():
 
         return model_info             
 
-    def save(self, model_path, no_model_check):
-        if not no_model_check:
+
+    def save(self, model_path):
+        if not self.no_model_check:
+            self.slimmed_onnx_output = onnxruntime_inference(self.model, self.input_data_dict)
+            if set(self.raw_onnx_output.keys()) != set(self.slimmed_onnx_output.keys()):
+                logger.warning("Model output mismatch after slimming.")
+                logger.warning("Raw model output keys: {}".format(self.raw_onnx_output.keys()))
+                logger.warning("Slimmed model output keys: {}".format(self.slimmed_onnx_output.keys()))
+                logger.warning("Please check the model carefully.")
+                logger.warning("If you are sure that the model is correct, please use --no_model_check to skip model check.")
+                return 1
+            else:
+                for key in self.raw_onnx_output.keys():
+                    if not np.allclose(self.raw_onnx_output[key], self.slimmed_onnx_output[key], rtol=1e-03, atol=1e-05):
+                        logger.warning("Model output mismatch after slimming.")
+                        logger.warning("Please check the model carefully.")
+                        logger.warning("If you are sure that the model is correct, please use --no_model_check to skip model check.")
+                        return 1
+
+        if not self.no_model_check:
             try:
                 checker.check_model(self.model)
             except ValueError:

@@ -35,7 +35,7 @@ def main():
         logger.error(f"Unrecognized Options: {unknown}")
         return 1
 
-    slimmer = OnnxSlim(args.input_model)
+    slimmer = OnnxSlim(args.input_model, no_model_check=args.no_model_check)
     if args.optimization == None:
         slimmer.shape_infer()
     elif args.shape_infer == 'enable':
@@ -50,6 +50,6 @@ def main():
     if args.optimization and args.dtype:
         slimmer.convert_data_format(args.dtype)
     slimmer.summary()
-    slimmer.save(args.output_model, args.no_model_check)
+    slimmer.save(args.output_model)
 
     return 0
