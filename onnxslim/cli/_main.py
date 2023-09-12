@@ -21,7 +21,7 @@ def main():
     
     optimization_parser = subparsers.add_parser("optimization", help="Perform Optimization")
     # Input Shape Modification
-    optimization_parser.add_argument("--input_shapes", nargs="+", type=str, help="Input shape of the model, e.g. 1,3,224,224")
+    optimization_parser.add_argument("--input_shapes", nargs="+", type=str, help="Input shape of the model, e.g. x:1,3,224,224 or x1:1,3,224,224 x2:1,3,224,224")
     # Shape Inference
     optimization_parser.add_argument("--shape_infer", choices=['enable', 'disable'], default="enable", help="Whether to enable shape_infer, default enable")  
     optimization_parser.add_argument("--data_prop", choices=['enable', 'disable'], default="enable", help="Whether to do data_prop, default enable")  
