@@ -54,6 +54,38 @@ class OnnxSlim():
                 if isinstance(tensor, Constant):
                     continue
                 tensor.shape = None
+
+        self.model = gs.export_onnx(graph)
+
+
+    def output_modification(self, outputs):
+        graph = gs.import_onnx(self.model)
+        graph.outputs.clear()
+        tensors = graph.tensors()
+        for output in outputs:
+            values = output.split(':')
+            if len(values) == 1:
+                key = values[0]
+                if key not in tensors.keys():
+                    raise Exception(f"Output name {key} not found in model, available keys: {' '.join(tensors.keys())}")
+                dtype = tensors[key].dtype
+                if dtype == None:
+                    dtype = np.float32
+                    logger.warning(f"Output layer {key} has no dtype, set to default {dtype}")
+            else:
+                key, dtype = values
+                if dtype == 'fp16':
+                    dtype = np.float16
+                elif dtype == 'fp32':
+                    dtype = np.float32
+                elif dtype == 'int32':
+                    dtype = np.int32
+                else:
+                    raise Exception(f"Output layer {key} assigned unsupported dtype {dtype}")
+
+            graph.outputs.append(tensors[key].to_variable(dtype=dtype, shape=tensors[key].shape))
+
+        graph.cleanup(remove_unused_node_outputs=True, remove_unused_graph_inputs=True).toposort()
         self.model = gs.export_onnx(graph)
 
 
