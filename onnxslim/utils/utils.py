@@ -29,8 +29,9 @@ def gen_onnxruntime_input_data(model):
                 for input_tensor in model.graph.input]
     
     input_data_dict = {}
-    for name, shape, dtype in input_info:
-        random_data = np.random.rand(*shape).astype(dtype)
+    for name, shapes, dtype in input_info:
+        shapes = [shape if shape != -1 else 1 for shape in shapes]
+        random_data = np.random.rand(*shapes).astype(dtype)
         input_data_dict[name] = random_data
         
     return input_data_dict
