@@ -123,7 +123,8 @@ class OnnxSlim():
         self.slimmed_info = self.summarize(self.model)
         final_op_info = []
         all_ops = set(list(self.float_info['op_type_counts'].keys()) + list(self.slimmed_info['op_type_counts'].keys()))
-        sorted_ops = sorted(all_ops, key=lambda x: x[0])
+        sorted_ops = list(all_ops)
+        sorted_ops.sort()
         for op in sorted_ops:
             float_number = self.float_info['op_type_counts'].get(op, 0)
             slimmed_number = self.slimmed_info['op_type_counts'].get(op, 0)
