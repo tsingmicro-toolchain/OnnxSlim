@@ -10,6 +10,7 @@ from onnx_graphsurgeon.ir.tensor import Constant
 from loguru import logger
 from .utils.font import GREEN, WHITE
 from .utils.utils import format_bytes, gen_onnxruntime_input_data, onnxruntime_inference
+from .optimizer import optimize_model
 
 class OnnxSlim():
     def __init__(self, model, log_level=1):
@@ -98,10 +99,12 @@ class OnnxSlim():
         self.model = onnx.shape_inference.infer_shapes(self.model, strict_mode=False, data_prop=data_prop)
 
 
-    def slim(self):
+    def slim(self, data_prop=True):
         graph = gs.import_onnx(self.model).toposort()
         graph.fold_constants().cleanup().toposort()
         self.model = gs.export_onnx(graph)
+        self.model = onnx.shape_inference.infer_shapes(self.model, strict_mode=False, data_prop=data_prop)
+        self.model = optimize_model(self.model)
 
 
     def convert_data_format(self, dtype):
