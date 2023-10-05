@@ -3,9 +3,9 @@ import onnx
 from onnx import checker
 import numpy as np
 from tabulate import tabulate, SEPARATING_LINE
-import onnx_graphsurgeon as gs
-from onnx_graphsurgeon.logger.logger import G_LOGGER
-from onnx_graphsurgeon.ir.tensor import Constant
+import onnxslim.onnx_graphsurgeon as gs
+from .onnx_graphsurgeon.logger.logger import G_LOGGER
+from .onnx_graphsurgeon.ir.tensor import Constant
 
 from loguru import logger
 from .utils.font import GREEN, WHITE
@@ -96,14 +96,14 @@ class OnnxSlim():
 
 
     def shape_infer(self, data_prop=True):
-        self.model = onnx.shape_inference.infer_shapes(self.model, strict_mode=False, data_prop=data_prop)
+        import onnxruntime.tools.symbolic_shape_infer as onnxrt_symbolic_shape_inference
+        self.model = onnxrt_symbolic_shape_inference.SymbolicShapeInference.infer_shapes(self.model, auto_merge=True)
 
 
     def slim(self, data_prop=True):
         graph = gs.import_onnx(self.model).toposort()
         graph.fold_constants().cleanup().toposort()
         self.model = gs.export_onnx(graph)
-        self.model = onnx.shape_inference.infer_shapes(self.model, strict_mode=False, data_prop=data_prop)
         self.model = optimize_model(self.model)
 
 
