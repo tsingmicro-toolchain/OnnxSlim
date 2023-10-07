@@ -1,6 +1,6 @@
 from loguru import logger
 import contextlib
-import onnx_graphsurgeon as gs
+import onnxslim.onnx_graphsurgeon as gs
 from collections import OrderedDict, Counter
 
 DEFAULT_FUSION_PATTERNS = OrderedDict()
