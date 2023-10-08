@@ -42,7 +42,7 @@ def gen_onnxruntime_input_data(model):
 
 def onnxruntime_inference(model, input_data):
     import onnxruntime as rt
-    sess = rt.InferenceSession(model.SerializeToString())
+    sess = rt.InferenceSession(model.SerializeToString(), providers=['CPUExecutionProvider'])
     onnx_output = sess.run(None, input_data)
 
     output_names = [output.name for output in sess.get_outputs()]
