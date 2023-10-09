@@ -127,3 +127,6 @@ tests/model
 
 # pylint
 .pylintrc
+
+# onnx
+*.onnx
