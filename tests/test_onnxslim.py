@@ -10,7 +10,8 @@ class TestOnnxModel:
                                       "mobilenet_v2",
                                       "resnet18",
                                       "tf_efficientnetv2_s",
-                                      "UNetModel-fp16"))
+                                      "UNetModel-fp16",
+                                      "dinov2"))
     def test_onnx_model(self, request, name):
         filename = download_onnx_from_url(f"http://120.224.26.73:15030/aifarm/onnx/{name}.onnx")
         command = f"onnxslim {filename} {name}_slim.onnx"
@@ -27,6 +28,6 @@ if __name__ == "__main__":
             "-p",
             "no:warnings",
             "-v",
-            "test/test_onnxslim.py",
+            "tests/test_onnxslim.py",
         ]
     )
