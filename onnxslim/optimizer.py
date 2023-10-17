@@ -1,5 +1,6 @@
 from loguru import logger
 import contextlib
+import numpy as np
 import onnxslim.onnx_graphsurgeon as gs
 from collections import OrderedDict, Counter
 
@@ -43,7 +44,7 @@ def find_conv_nodes(node):
     match = {}
     if node.op == "Conv":
         if (node.i(0).op == "Pad"):
-            pad_node = pad_variable= node.i(0)
+            pad_node = node.i(0)
             pad_value = pad_node.inputs[1].values.tolist()
             input_variable = node.i(0).inputs[0]
             input_variable.outputs.remove(pad_node)
@@ -73,6 +74,66 @@ def find_conv_nodes(node):
                     "outputs": outputs,
                     "name": node.name,
                     "attrs": node.attrs,
+                    "domain": None
+                }
+            )
+
+    return match
+
+@register_fusion_pattern("ConvTranspose")
+def find_conv_transpose_nodes(node):
+    # fmt: off
+    '''
+             x
+             |
+        ConvTranspose
+             |
+      BatchNormalization
+    '''
+    # fmt: on
+    match = {}
+    if node.op == "BatchNormalization":
+        if (node.i(0).op == "ConvTranspose"):
+            conv_transpose_node = node.i(0)
+            conv_transpose_weight = conv_transpose_node.inputs[1].values
+            bn_node = node
+            bn_scale = bn_node.inputs[1].values
+            bn_bias = bn_node.inputs[2].values
+            bn_running_mean = bn_node.inputs[3].values
+            bn_running_var = bn_node.inputs[4].values
+            bn_eps = bn_node.attrs['epsilon']
+
+            if len(conv_transpose_node.inputs) == 2:
+                conv_transpose_bias = np.zeros_like(bn_running_mean)
+            else:
+                conv_transpose_bias = conv_transpose_node.inputs[2].values
+
+            bn_var_rsqrt = 1.0 / np.sqrt(bn_running_var + bn_eps)
+            shape = [1] * len(conv_transpose_weight.shape)
+            shape[1] = -1
+            conv_w = conv_transpose_weight * (bn_scale * bn_var_rsqrt).reshape(shape)
+            conv_b = (conv_transpose_bias - bn_running_mean) * bn_var_rsqrt * bn_scale + bn_bias
+
+            input_variable = bn_node.inputs[0]
+            input_variable.outputs.remove(bn_node)
+
+            inputs = []
+            inputs.append(list(conv_transpose_node.inputs)[0])
+            weight_name = list(conv_transpose_node.inputs)[1].name
+            bias_name = '.'.join(weight_name.split('.')[:-1] + ['bias'])
+            inputs.append(gs.Constant(weight_name, values=conv_w))
+            inputs.append(gs.Constant(bias_name, values=conv_b))
+            outputs = list(bn_node.outputs)
+
+            bn_node.inputs.clear()
+            bn_node.outputs.clear()
+
+            match.update(
+                {
+                    "inputs": inputs,
+                    "outputs": outputs,
+                    "name": conv_transpose_node.name,
+                    "attrs": conv_transpose_node.attrs,
                     "domain": None
                 }
             )
