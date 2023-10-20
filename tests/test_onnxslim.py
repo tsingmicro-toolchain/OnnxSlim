@@ -11,9 +11,10 @@ class TestOnnxModel:
                                       "resnet18",
                                       "tf_efficientnetv2_s",
                                       "UNetModel-fp16",
-                                      "dinov2"))
+                                      "dinov2",
+                                      "unet"))
     def test_onnx_model(self, request, name):
-        filename = download_onnx_from_url(f"http://120.224.26.73:15030/aifarm/onnx/{name}.onnx")
+        filename = download_onnx_from_url(f"http://120.224.26.32:15030/aifarm/onnx/{name}.onnx")
         command = f"onnxslim {filename} {name}_slim.onnx"
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
         output = result.stderr.strip()
