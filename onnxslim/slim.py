@@ -1,3 +1,4 @@
+import os
 import sys
 import onnx
 from onnx import checker
@@ -7,10 +8,15 @@ import onnxslim.onnx_graphsurgeon as gs
 from .onnx_graphsurgeon.logger.logger import G_LOGGER
 from .onnx_graphsurgeon.ir.tensor import Constant
 
+import logging
+logging.basicConfig(level=logging.ERROR)
+
 from loguru import logger
 from .utils.font import GREEN, WHITE
 from .utils.utils import format_bytes, gen_onnxruntime_input_data, onnxruntime_inference
 from .optimizer import optimize_model
+
+DEBUG = bool(os.getenv('ONNXSLIM_DEBUG'))
 
 class OnnxSlim():
     def __init__(self, model, log_level=1):
@@ -33,6 +39,8 @@ class OnnxSlim():
             raise Exception("level must be 0, 1, 2 or 3")
         
         G_LOGGER.severity = G_LOGGER.ERROR
+        import onnxruntime as ort
+        ort.set_default_logger_severity(3)
 
 
     def input_shape_modification(self, input_shapes):
@@ -98,6 +106,8 @@ class OnnxSlim():
     def shape_infer(self, data_prop=True):
         import onnxruntime.tools.symbolic_shape_infer as onnxrt_symbolic_shape_inference
         self.model = onnxrt_symbolic_shape_inference.SymbolicShapeInference.infer_shapes(self.model, auto_merge=True)
+        if DEBUG:
+            onnx.save(self.model, 'debug_shape_infer.onnx')
 
 
     def slim(self, data_prop=True):
@@ -105,6 +115,8 @@ class OnnxSlim():
         graph.fold_constants().cleanup().toposort()
         self.model = gs.export_onnx(graph)
         self.model = optimize_model(self.model)
+        if DEBUG:
+            onnx.save(self.model, 'debug_slim.onnx')
 
 
     def convert_data_format(self, dtype):
@@ -200,3 +212,11 @@ class OnnxSlim():
                 location=os.path.basename(model_path) + '.data',
             )
             logger.warning("Model too large and saved as external data automatically.")
+
+
+    def is_converged(self):
+        slimmed_info = self.summarize(self.model)
+        if 'Shape' not in slimmed_info["op_type_counts"].keys():
+            return True
+        else:
+            return False
