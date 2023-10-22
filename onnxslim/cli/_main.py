@@ -1,12 +1,11 @@
 def main():
-    import sys    
+    import os
     import argparse
     from loguru import logger
     import onnxslim
     from onnxslim.slim import OnnxSlim
 
-    common_parser = argparse.ArgumentParser(add_help=False)
-
+    MAX_ITER = 10 if not os.getenv('ONNXSLIM_MAX_ITER') else os.getenv('ONNXSLIM_MAX_ITER')
     parser = argparse.ArgumentParser(
         description="OnnxSlim: A Toolkit to Help Optimizer Onnx Model",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -60,7 +59,12 @@ def main():
         slimmer.shape_infer(data_prop)
 
     if args.optimization == None or args.constant_folding == 'enable':
-        slimmer.slim()
+        while (MAX_ITER > 0):
+            slimmer.slim()
+            slimmer.shape_infer()
+            if slimmer.is_converged(MAX_ITER):
+                break
+            MAX_ITER -= 1
 
     if args.optimization and args.dtype:
         slimmer.convert_data_format(args.dtype)
