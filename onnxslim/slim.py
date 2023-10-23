@@ -27,7 +27,7 @@ class OnnxSlim():
 
     def init_logging(self, log_level):
         logger.remove()
-        if log_level == 0: # DEBUG
+        if log_level == 0 or DEBUG: # DEBUG
             logger.add(sys.stderr, level=G_LOGGER.DEBUG)
         elif log_level == 1: # INFO
             logger.add(sys.stderr, level=G_LOGGER.INFO)
@@ -153,7 +153,7 @@ class OnnxSlim():
                          tablefmt="pretty").split('\n')
         output = "\n".join([line if line !='| \x01 |' else lines[0] for line in lines])
 
-        logger.info(WHITE+"\n" + output)
+        print(output)
 
 
     def summarize(self, model):
@@ -214,9 +214,11 @@ class OnnxSlim():
             logger.warning("Model too large and saved as external data automatically.")
 
 
-    def is_converged(self):
+    def is_converged(self, iter):
+        logger.debug(f"optimization iter: {iter}")
         slimmed_info = self.summarize(self.model)
         if 'Shape' not in slimmed_info["op_type_counts"].keys():
+            logger.debug(f"converged at iter: {iter}")
             return True
         else:
             return False
