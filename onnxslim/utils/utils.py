@@ -31,6 +31,7 @@ def gen_onnxruntime_input_data(model):
     input_data_dict = {}
     for name, shapes, dtype in input_info:
         shapes = [shape if shape != -1 else 1 for shape in shapes]
+        shapes = shapes if shapes else [1]
         if dtype in [np.int32, np.int64]:
             random_data = np.random.randint(10, size=shapes).astype(dtype)
         else:

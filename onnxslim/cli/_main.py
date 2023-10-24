@@ -5,7 +5,8 @@ def main():
     import onnxslim
     from onnxslim.slim import OnnxSlim
 
-    MAX_ITER = 10 if not os.getenv('ONNXSLIM_MAX_ITER') else os.getenv('ONNXSLIM_MAX_ITER')
+    MAX_ITER = 10 if not os.getenv('ONNXSLIM_MAX_ITER') else int(os.getenv('ONNXSLIM_MAX_ITER'))
+
     parser = argparse.ArgumentParser(
         description="OnnxSlim: A Toolkit to Help Optimizer Onnx Model",
         formatter_class=argparse.RawDescriptionHelpFormatter,

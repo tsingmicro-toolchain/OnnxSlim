@@ -217,10 +217,10 @@ def find_slice_nodes(node):
 
                         inputs = []
                         inputs.append(list(first_slice_node.inputs)[0])
-                        inputs.append(gs.Constant(second_slice_node_inputs[1].name, values=np.array(new_starts)))
-                        inputs.append(gs.Constant(second_slice_node_inputs[2].name, values=np.array(new_ends)))
-                        inputs.append(gs.Constant(second_slice_node_inputs[3].name, values=np.array(new_axes)))
-                        inputs.append(gs.Constant(second_slice_node_inputs[4].name, values=np.array(new_steps)))
+                        inputs.append(gs.Constant(second_slice_node_inputs[1].name, values=np.array(new_starts, dtype=np.int64)))
+                        inputs.append(gs.Constant(second_slice_node_inputs[2].name, values=np.array(new_ends, dtype=np.int64)))
+                        inputs.append(gs.Constant(second_slice_node_inputs[3].name, values=np.array(new_axes, dtype=np.int64)))
+                        inputs.append(gs.Constant(second_slice_node_inputs[4].name, values=np.array(new_steps, dtype=np.int64)))
                         outputs = list(second_slice_node.outputs)
 
                         second_slice_node.inputs.clear()
