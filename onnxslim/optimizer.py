@@ -31,33 +31,33 @@ def get_node_users(node):
     return users
 
 
+def delete_node(node):
+    input_variable = node.inputs[0]
+    node_variable = node.outputs[0]
+    next_nodes = get_node_users(node)
+    if next_nodes:
+        for next_node in next_nodes:
+            index = next_node.inputs.index(node_variable)
+            next_node.inputs.pop(index)
+            next_node.inputs.insert(index, input_variable)
+    else:
+        input_node = node.i()
+        input_node.outputs.remove(node.inputs[0])
+        input_node.outputs.append(node.outputs[0])
+        node.outputs.clear()
+
+
 def graph_constant_fold_inplace(graph):
     for node in graph.nodes:
         if node.op == "Identity" or node.op == "Dropout":
-            input_variable = node.inputs[0]
-            node_variable = node.outputs[0]
-            next_nodes = get_node_users(node)
-            if next_nodes:
-                for next_node in next_nodes:
-                    index = next_node.inputs.index(node_variable)
-                    next_node.inputs.pop(index)
-                    next_node.inputs.insert(index, input_variable)
-            else:
-                input_node = node.i()
-                input_node.outputs.remove(node.inputs[0])
-                input_node.outputs.append(node.outputs[0])
-                node.outputs.clear()
+            delete_node(node)
 
         elif node.op == "Pad":
             if len(node.inputs) > 1 and isinstance(node.inputs[1], Constant):
                 pad_value = node.inputs[1].values.tolist()
                 pad_value = [pad_value] if not isinstance(pad_value, list) else pad_value
                 if all([value == 0 for value in pad_value]):
-                    input_node = node.i()
-                    input_node.outputs.remove(node.inputs[0])
-                    input_node.outputs.append(node.outputs[0])
-                    node.outputs.clear()
-
+                    delete_node(node)
 
 @register_fusion_pattern("Conv")
 def find_conv_nodes(node):
