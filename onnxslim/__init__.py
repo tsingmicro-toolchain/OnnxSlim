@@ -1,5 +1,6 @@
 import os
 import warnings
+
 from .version import __version__
 
 if os.path.dirname(os.path.realpath(__file__)) == os.path.join(

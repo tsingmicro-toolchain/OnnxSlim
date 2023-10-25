@@ -15,13 +15,15 @@
 # limitations under the License.
 #
 
-from ..util.exception import OnnxGraphSurgeonException
+import enum
 
 import inspect
-import enum
-import time
-import sys
 import os
+import sys
+import time
+
+from ..util.exception import OnnxGraphSurgeonException
+
 
 # Context manager to apply indentation to messages
 class LoggerIndent(object):
@@ -87,7 +89,9 @@ class Logger(object):
         CRITICAL: "red_1",
     }
 
-    def __init__(self, severity=INFO, colors=True, letter=True, timestamp=False, line_info=False):
+    def __init__(
+        self, severity=INFO, colors=True, letter=True, timestamp=False, line_info=False
+    ):
         """
         Logger.
 
@@ -100,7 +104,9 @@ class Logger(object):
         """
         self._severity = severity
         self.logging_indent = 0
-        self.root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
+        self.root_dir = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), os.pardir, os.pardir)
+        )
         self.once_logged = set()
         self.colors = colors
         self.letter = letter
@@ -159,7 +165,9 @@ class Logger(object):
                     # If the file is not located in trt_smeagol, use its basename instead.
                     if os.pardir in filename:
                         filename = os.path.basename(filename)
-                    return "[{:}:{:}] ".format(filename, sys._getframe(stack_depth).f_lineno)
+                    return "[{:}:{:}] ".format(
+                        filename, sys._getframe(stack_depth).f_lineno
+                    )
 
                 prefix = ""
                 if self.letter:
@@ -172,7 +180,9 @@ class Logger(object):
 
             def apply_indentation(message):
                 message_lines = str(message).splitlines()
-                return "\n".join(["\t" * self.logging_indent + line for line in message_lines])
+                return "\n".join(
+                    ["\t" * self.logging_indent + line for line in message_lines]
+                )
 
             def apply_color(message):
                 if self.colors:

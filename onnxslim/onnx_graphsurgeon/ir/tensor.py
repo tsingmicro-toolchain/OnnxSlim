@@ -15,11 +15,12 @@
 # limitations under the License.
 #
 
+from typing import Sequence, Union
+
+import numpy as np
+
 from ..logger.logger import G_LOGGER
 from ..util import misc
-
-from typing import Set, Sequence, Union
-import numpy as np
 
 
 class Tensor(object):
@@ -80,7 +81,9 @@ class Tensor(object):
         self.data_location = data_location
         return self
 
-    def to_variable(self, dtype: np.dtype = None, shape: Sequence[Union[int, str]] = []):
+    def to_variable(
+        self, dtype: np.dtype = None, shape: Sequence[Union[int, str]] = []
+    ):
         """
         Modifies this tensor in-place to convert it to a Variable. This means that all consumers/producers of the tensor will see the update.
 
@@ -136,7 +139,9 @@ class Tensor(object):
         return self.outputs[consumer_idx].outputs[tensor_idx]
 
     def __str__(self):
-        return "{:} ({:}): (shape={:}, dtype={:})".format(type(self).__name__, self.name, self.shape, self.dtype)
+        return "{:} ({:}): (shape={:}, dtype={:})".format(
+            type(self).__name__, self.name, self.shape, self.dtype
+        )
 
     def __repr__(self):  # Hack to make logging output pretty.
         return self.__str__()
@@ -155,7 +160,13 @@ class Variable(Tensor):
     def empty():
         return Variable(name="")
 
-    def __init__(self, name: str, dtype: np.dtype = None, shape: Sequence[Union[int, str]] = None, type: str = "tensor_type",):
+    def __init__(
+        self,
+        name: str,
+        dtype: np.dtype = None,
+        shape: Sequence[Union[int, str]] = None,
+        type: str = "tensor_type",
+    ):
         """
         Represents a Tensor whose value is not known until inference-time.
 
@@ -196,7 +207,10 @@ class LazyValues(object):
         Args:
             tensor (onnx.TensorProto): The ONNX tensor that this instance should lazily load.
         """
-        from ..importers.onnx_importer import get_onnx_tensor_shape, get_onnx_tensor_dtype
+        from ..importers.onnx_importer import (
+            get_onnx_tensor_dtype,
+            get_onnx_tensor_shape,
+        )
 
         self.tensor = tensor
         self.shape = get_onnx_tensor_shape(self.tensor)
@@ -223,7 +237,12 @@ class LazyValues(object):
 
 
 class Constant(Tensor):
-    def __init__(self, name: str, values: Union[np.ndarray, LazyValues], data_location: int = None):
+    def __init__(
+        self,
+        name: str,
+        values: Union[np.ndarray, LazyValues],
+        data_location: int = None,
+    ):
         """
         Represents a Tensor whose value is known.
 
@@ -247,7 +266,9 @@ class Constant(Tensor):
         self._values = values
         self.data_location = data_location
 
-    def to_variable(self, dtype: np.dtype = None, shape: Sequence[Union[int, str]] = []):
+    def to_variable(
+        self, dtype: np.dtype = None, shape: Sequence[Union[int, str]] = []
+    ):
         del self._values
         return super().to_variable(dtype, shape)
 

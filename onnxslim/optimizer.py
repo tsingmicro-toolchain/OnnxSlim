@@ -1,10 +1,12 @@
-from loguru import logger
 import contextlib
+
+from collections import Counter, OrderedDict
+
 import numpy as np
+from loguru import logger
+
 import onnxslim.onnx_graphsurgeon as gs
 from onnxslim.onnx_graphsurgeon.ir.tensor import Constant
-
-from collections import OrderedDict, Counter
 
 DEFAULT_FUSION_PATTERNS = OrderedDict()
 
@@ -25,8 +27,8 @@ def get_default_fusion_patterns():
 
 def get_node_users(node):
     users = []
-    for output in node.outputs: # output is a Variable
-        for user in output.outputs: # user is a Node
+    for output in node.outputs:  # output is a Variable
+        for user in output.outputs:  # user is a Node
             users.append(user)
     return users
 
@@ -55,9 +57,12 @@ def graph_constant_fold_inplace(graph):
         elif node.op == "Pad":
             if len(node.inputs) > 1 and isinstance(node.inputs[1], Constant):
                 pad_value = node.inputs[1].values.tolist()
-                pad_value = [pad_value] if not isinstance(pad_value, list) else pad_value
+                pad_value = (
+                    [pad_value] if not isinstance(pad_value, list) else pad_value
+                )
                 if all([value == 0 for value in pad_value]):
                     delete_node(node)
+
 
 @register_fusion_pattern("Conv")
 def find_conv_nodes(node):
@@ -72,13 +77,13 @@ def find_conv_nodes(node):
     # fmt: on
     match = {}
     if node.op == "Conv":
-        if (node.i(0).op == "Pad"):
+        if node.i(0).op == "Pad":
             pad_node = node.i(0)
             pad_value = pad_node.inputs[1].values.tolist()
             input_variable = node.i(0).inputs[0]
             input_variable.outputs.remove(pad_node)
-            
-            pad_variable= node.i(0).outputs[0] # pad output variable
+
+            pad_variable = node.i(0).outputs[0]  # pad output variable
             index = node.inputs.index(pad_variable)
             node.inputs.pop(index)
             node.inputs.insert(index, input_variable)
@@ -91,28 +96,31 @@ def find_conv_nodes(node):
             node.outputs.clear()
             pad_node.inputs.clear()
             pad_node.outputs.clear()
-            
-            conv_pads = attrs['pads']
+
+            conv_pads = attrs["pads"]
             len_conv_pads = int(len(conv_pads) / 2)
-            
+
             len_pads = int(len(pad_value) / 2)
-            pads = pad_value[len_pads - len_conv_pads: len_pads] + pad_value[len_pads + len_conv_pads: ]
-            attrs['pads'] = pads
+            pads = (
+                pad_value[len_pads - len_conv_pads : len_pads]
+                + pad_value[len_pads + len_conv_pads :]
+            )
+            attrs["pads"] = pads
 
             match.update(
                 {
-                    node.name:
-                    {
+                    node.name: {
                         "inputs": inputs,
                         "outputs": outputs,
                         "name": node.name,
                         "attrs": node.attrs,
-                        "domain": None
+                        "domain": None,
                     }
                 }
             )
 
     return match
+
 
 @register_fusion_pattern("ConvTranspose")
 def find_conv_transpose_nodes(node):
@@ -127,7 +135,7 @@ def find_conv_transpose_nodes(node):
     # fmt: on
     match = {}
     if node.op == "BatchNormalization":
-        if (node.i(0).op == "ConvTranspose"):
+        if node.i(0).op == "ConvTranspose":
             conv_transpose_node = node.i(0)
             conv_transpose_weight = conv_transpose_node.inputs[1].values
             bn_node = node
@@ -135,7 +143,7 @@ def find_conv_transpose_nodes(node):
             bn_bias = bn_node.inputs[2].values
             bn_running_mean = bn_node.inputs[3].values
             bn_running_var = bn_node.inputs[4].values
-            bn_eps = bn_node.attrs['epsilon']
+            bn_eps = bn_node.attrs["epsilon"]
 
             if len(conv_transpose_node.inputs) == 2:
                 conv_transpose_bias = np.zeros_like(bn_running_mean)
@@ -146,7 +154,9 @@ def find_conv_transpose_nodes(node):
             shape = [1] * len(conv_transpose_weight.shape)
             shape[1] = -1
             conv_w = conv_transpose_weight * (bn_scale * bn_var_rsqrt).reshape(shape)
-            conv_b = (conv_transpose_bias - bn_running_mean) * bn_var_rsqrt * bn_scale + bn_bias
+            conv_b = (
+                conv_transpose_bias - bn_running_mean
+            ) * bn_var_rsqrt * bn_scale + bn_bias
 
             input_variable = bn_node.inputs[0]
             input_variable.outputs.remove(bn_node)
@@ -154,7 +164,7 @@ def find_conv_transpose_nodes(node):
             inputs = []
             inputs.append(list(conv_transpose_node.inputs)[0])
             weight_name = list(conv_transpose_node.inputs)[1].name
-            bias_name = '.'.join(weight_name.split('.')[:-1] + ['bias'])
+            bias_name = ".".join(weight_name.split(".")[:-1] + ["bias"])
             inputs.append(gs.Constant(weight_name, values=conv_w))
             inputs.append(gs.Constant(bias_name, values=conv_b))
             outputs = list(bn_node.outputs)
@@ -164,13 +174,12 @@ def find_conv_transpose_nodes(node):
 
             match.update(
                 {
-                    conv_transpose_node.name:
-                    {
+                    conv_transpose_node.name: {
                         "inputs": inputs,
                         "outputs": outputs,
                         "name": conv_transpose_node.name,
                         "attrs": conv_transpose_node.attrs,
-                        "domain": None
+                        "domain": None,
                     }
                 }
             )
@@ -191,12 +200,25 @@ def find_slice_nodes(node):
     # fmt: on
     match = {}
     if node.op == "Slice":
-        if (node.i(0).op == "Slice"):
+        if node.i(0).op == "Slice":
             first_slice_node = node.i(0)
             first_slice_node_inputs = list(first_slice_node.inputs)
-            if all([isinstance(input, Constant) for input in first_slice_node_inputs[1:]]):
+            if all(
+                [isinstance(input, Constant) for input in first_slice_node_inputs[1:]]
+            ):
                 first_slice_node_users = get_node_users(first_slice_node)
-                if all([user.op == "Slice" and all([isinstance(input, Constant) for input in list(user.inputs)[1:]]) for user in first_slice_node_users]):
+                if all(
+                    [
+                        user.op == "Slice"
+                        and all(
+                            [
+                                isinstance(input, Constant)
+                                for input in list(user.inputs)[1:]
+                            ]
+                        )
+                        for user in first_slice_node_users
+                    ]
+                ):
                     first_slice_node_starts = first_slice_node_inputs[1].values.tolist()
                     first_slice_node_ends = first_slice_node_inputs[2].values.tolist()
                     first_slice_node_axes = first_slice_node_inputs[3].values.tolist()
@@ -205,10 +227,18 @@ def find_slice_nodes(node):
                     for user_node in first_slice_node_users:
                         second_slice_node = user_node
                         second_slice_node_inputs = list(second_slice_node.inputs)
-                        second_slice_node_starts = second_slice_node_inputs[1].values.tolist()
-                        second_slice_node_ends = second_slice_node_inputs[2].values.tolist()
-                        second_slice_node_axes = second_slice_node_inputs[3].values.tolist()
-                        second_slice_node_steps = second_slice_node_inputs[4].values.tolist()
+                        second_slice_node_starts = second_slice_node_inputs[
+                            1
+                        ].values.tolist()
+                        second_slice_node_ends = second_slice_node_inputs[
+                            2
+                        ].values.tolist()
+                        second_slice_node_axes = second_slice_node_inputs[
+                            3
+                        ].values.tolist()
+                        second_slice_node_steps = second_slice_node_inputs[
+                            4
+                        ].values.tolist()
 
                         new_starts = first_slice_node_starts + second_slice_node_starts
                         new_ends = first_slice_node_ends + second_slice_node_ends
@@ -217,10 +247,30 @@ def find_slice_nodes(node):
 
                         inputs = []
                         inputs.append(list(first_slice_node.inputs)[0])
-                        inputs.append(gs.Constant(second_slice_node_inputs[1].name, values=np.array(new_starts, dtype=np.int64)))
-                        inputs.append(gs.Constant(second_slice_node_inputs[2].name, values=np.array(new_ends, dtype=np.int64)))
-                        inputs.append(gs.Constant(second_slice_node_inputs[3].name, values=np.array(new_axes, dtype=np.int64)))
-                        inputs.append(gs.Constant(second_slice_node_inputs[4].name, values=np.array(new_steps, dtype=np.int64)))
+                        inputs.append(
+                            gs.Constant(
+                                second_slice_node_inputs[1].name,
+                                values=np.array(new_starts, dtype=np.int64),
+                            )
+                        )
+                        inputs.append(
+                            gs.Constant(
+                                second_slice_node_inputs[2].name,
+                                values=np.array(new_ends, dtype=np.int64),
+                            )
+                        )
+                        inputs.append(
+                            gs.Constant(
+                                second_slice_node_inputs[3].name,
+                                values=np.array(new_axes, dtype=np.int64),
+                            )
+                        )
+                        inputs.append(
+                            gs.Constant(
+                                second_slice_node_inputs[4].name,
+                                values=np.array(new_steps, dtype=np.int64),
+                            )
+                        )
                         outputs = list(second_slice_node.outputs)
 
                         second_slice_node.inputs.clear()
@@ -228,13 +278,12 @@ def find_slice_nodes(node):
 
                         match.update(
                             {
-                                second_slice_node.name:
-                                {
+                                second_slice_node.name: {
                                     "inputs": inputs,
                                     "outputs": outputs,
                                     "name": second_slice_node.name,
                                     "attrs": second_slice_node.attrs,
-                                    "domain": None
+                                    "domain": None,
                                 }
                             }
                         )
