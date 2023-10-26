@@ -7,6 +7,8 @@ from loguru import logger
 
 import onnxslim.onnx_graphsurgeon as gs
 from onnxslim.onnx_graphsurgeon.ir.tensor import Constant
+from onnxslim.onnx_graphsurgeon.exporters.onnx_exporter import dtype_to_onnx
+
 
 DEFAULT_FUSION_PATTERNS = OrderedDict()
 
@@ -62,6 +64,12 @@ def graph_constant_fold_inplace(graph):
                 )
                 if all([value == 0 for value in pad_value]):
                     delete_node(node)
+        elif node.op == "Cast":
+            inp_dtype = [
+                dtype_to_onnx(input.dtype) for input in node.inputs
+            ][0]
+            if inp_dtype == node.attrs["to"]:
+                delete_node(node)
 
 
 @register_fusion_pattern("Conv")
