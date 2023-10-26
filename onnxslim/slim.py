@@ -25,7 +25,10 @@ DEBUG = bool(os.getenv("ONNXSLIM_DEBUG"))
 class OnnxSlim:
     def __init__(self, model, log_level=1):
         self.init_logging(log_level)
-        self.model = onnx.load(model)
+        if isinstance(model, str):
+            self.model = onnx.load(model)
+        else:
+            self.model = model
         self.float_info = self.summarize(self.model)
 
     def init_logging(self, log_level):
@@ -115,7 +118,7 @@ class OnnxSlim:
         self.input_data_dict = gen_onnxruntime_input_data(self.model)
         self.raw_onnx_output = onnxruntime_inference(self.model, self.input_data_dict)
 
-    def shape_infer(self, data_prop=True):
+    def shape_infer(self):
         import onnxruntime.tools.symbolic_shape_infer as onnxrt_symbolic_shape_inference
 
         self.model = (
@@ -242,19 +245,22 @@ class OnnxSlim:
             except ValueError:
                 logger.warning("Model too large and cannot be checked.")
 
-        try:
-            onnx.save(self.model, model_path)
-        except ValueError:
-            import os
+        if model_path:
+            try:
+                onnx.save(self.model, model_path)
+            except ValueError:
+                import os
 
-            onnx.save(
-                self.model,
-                model_path,
-                save_as_external_data=True,
-                all_tensors_to_one_file=True,
-                location=os.path.basename(model_path) + ".data",
-            )
-            logger.warning("Model too large and saved as external data automatically.")
+                onnx.save(
+                    self.model,
+                    model_path,
+                    save_as_external_data=True,
+                    all_tensors_to_one_file=True,
+                    location=os.path.basename(model_path) + ".data",
+                )
+                logger.warning(
+                    "Model too large and saved as external data automatically."
+                )
 
     def is_converged(self, iter):
         logger.debug(f"optimization iter: {iter}")

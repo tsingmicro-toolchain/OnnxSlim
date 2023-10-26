@@ -1,1 +1,1 @@
-from ._main import *
+from ._main import main, slim

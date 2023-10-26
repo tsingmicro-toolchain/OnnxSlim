@@ -1,10 +1,16 @@
-def main():
-    import argparse
+def slim(
+    model,
+    no_model_check=None,
+    output_model=None,
+    optimization=None,
+    input_shapes=None,
+    outputs=None,
+    shape_infer=None,
+    constant_folding=None,
+    dtype=None,
+):
     import os
 
-    from loguru import logger
-
-    import onnxslim
     from onnxslim.slim import OnnxSlim
 
     MAX_ITER = (
@@ -12,6 +18,50 @@ def main():
         if not os.getenv("ONNXSLIM_MAX_ITER")
         else int(os.getenv("ONNXSLIM_MAX_ITER"))
     )
+
+    slimmer = OnnxSlim(model)
+    if optimization and input_shapes:
+        slimmer.input_shape_modification(input_shapes)
+
+    if optimization and outputs:
+        slimmer.output_modification(outputs)
+
+    if not no_model_check:
+        slimmer.check_point()
+
+    if optimization == None:
+        slimmer.shape_infer()
+    elif shape_infer == "enable":
+        data_prop = False
+        if data_prop == "enable":
+            data_prop = True
+        slimmer.shape_infer()
+
+    if optimization == None or constant_folding == "enable":
+        while MAX_ITER > 0:
+            slimmer.slim()
+            slimmer.shape_infer()
+            if slimmer.is_converged(MAX_ITER):
+                break
+            MAX_ITER -= 1
+
+    if optimization and dtype:
+        slimmer.convert_data_format(dtype)
+
+    slimmer.save(output_model, no_model_check)
+
+    if not output_model:
+        return slimmer.model
+    else:
+        slimmer.summary()
+
+
+def main():
+    import argparse
+
+    from loguru import logger
+
+    import onnxslim
 
     parser = argparse.ArgumentParser(
         description="OnnxSlim: A Toolkit to Help Optimizer Onnx Model",
@@ -53,12 +103,6 @@ def main():
         default="enable",
         help="Whether to enable shape_infer, default enable.",
     )
-    optimization_parser.add_argument(
-        "--data_prop",
-        choices=["enable", "disable"],
-        default="enable",
-        help="Whether to do data_prop, default enable.",
-    )
 
     # Constant Folding
     optimization_parser.add_argument(
@@ -74,41 +118,29 @@ def main():
         choices=["fp16", "fp32"],
         help="Whether to enable shape_infer, default enable.",
     )
+
     args, unknown = parser.parse_known_args()
 
     if unknown:
         logger.error(f"Unrecognized Options: {unknown}")
         return 1
 
-    slimmer = OnnxSlim(args.input_model)
-    if args.optimization and args.input_shapes:
-        slimmer.input_shape_modification(args.input_shapes)
+    inputs_shapes = None if not args.optimization else args.input_shapes
+    outputs = None if not args.optimization else args.outputs
+    shape_infer = None if not args.optimization else args.shape_infer
+    constant_folding = None if not args.optimization else args.constant_folding
+    dtype = None if not args.optimization else args.dtype
 
-    if args.optimization and args.outputs:
-        slimmer.output_modification(args.outputs)
-
-    if not args.no_model_check:
-        slimmer.check_point()
-
-    if args.optimization == None:
-        slimmer.shape_infer()
-    elif args.shape_infer == "enable":
-        data_prop = False
-        if args.data_prop == "enable":
-            data_prop = True
-        slimmer.shape_infer(data_prop)
-
-    if args.optimization == None or args.constant_folding == "enable":
-        while MAX_ITER > 0:
-            slimmer.slim()
-            slimmer.shape_infer()
-            if slimmer.is_converged(MAX_ITER):
-                break
-            MAX_ITER -= 1
-
-    if args.optimization and args.dtype:
-        slimmer.convert_data_format(args.dtype)
-    slimmer.summary()
-    slimmer.save(args.output_model, args.no_model_check)
+    slim(
+        args.input_model,
+        args.no_model_check,
+        args.output_model,
+        args.optimization,
+        inputs_shapes,
+        outputs,
+        shape_infer,
+        constant_folding,
+        dtype,
+    )
 
     return 0
