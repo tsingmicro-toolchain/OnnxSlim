@@ -27,8 +27,8 @@ class TestOnnxModel:
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
         output = result.stderr.strip()
         # Assert the expected return code
-        assert result.returncode == 0
         print(output)
+        assert result.returncode == 0
 
 
 if __name__ == "__main__":
