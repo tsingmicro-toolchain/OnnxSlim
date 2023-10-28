@@ -35,6 +35,12 @@ def get_node_users(node):
     return users
 
 
+def get_constant_variable(node):
+    for input in list(node.inputs):
+        if isinstance(input, Constant):
+            return input
+
+
 def delete_node(node):
     input_variable = node.inputs[0]
     node_variable = node.outputs[0]
@@ -297,6 +303,181 @@ def find_slice_nodes(node):
     return match
 
 
+@register_fusion_pattern("Reshape")
+def find_slice_nodes(node):
+    # fmt: off
+    '''
+             x
+             |
+           Reshape
+             |
+           Reshape
+    '''
+    # fmt: on
+    match = {}
+    if node.op == "Reshape":
+        if node.i(0).op == "Reshape":
+            first_reshape_node = node.i(0)
+            first_reshape_node_inputs = list(first_reshape_node.inputs)
+            first_reshape_node_users = get_node_users(first_reshape_node)
+            if len(first_reshape_node_users) == 1:
+                second_reshape_node = node
+                inputs = []
+                inputs.append(first_reshape_node_inputs[0])
+                inputs.append(second_reshape_node.inputs[1])
+
+                outputs = list(second_reshape_node.outputs)
+
+                first_reshape_node.outputs.clear()
+                second_reshape_node.inputs.clear()
+                second_reshape_node.outputs.clear()
+
+                match.update(
+                    {
+                        second_reshape_node.name: {
+                            "inputs": inputs,
+                            "outputs": outputs,
+                            "name": second_reshape_node.name,
+                            "attrs": second_reshape_node.attrs,
+                            "domain": None,
+                        }
+                    }
+                )
+
+    return match
+
+
+@register_fusion_pattern("Gemm")
+def find_matmul_add_nodes(node):
+    # fmt: off
+    '''
+             x
+             |
+           MatMul
+             |
+            Add
+    '''
+    # fmt: on
+    match = {}
+    if node.op == "Add":
+        if (isinstance(node.inputs[1], Constant) and node.i(0).op == "MatMul") or (
+            isinstance(node.inputs[0], Constant) and node.i(1).op == "MatMul"
+        ):
+            matmul_node = (
+                node.i(0) if isinstance(node.inputs[1], Constant) else node.i(1)
+            )
+            matmul_bias_variable = get_constant_variable(matmul_node)
+            input_variable = (
+                matmul_node.inputs[0]
+                if isinstance(matmul_node.inputs[1], Constant)
+                else matmul_node.inputs[1]
+            )
+            users = get_node_users(matmul_node)
+            if len(users) == 1 and matmul_bias_variable:
+                if (
+                    input_variable.shape
+                    and len(input_variable.shape) > 2
+                    and all([isinstance(value, int) for value in input_variable.shape])
+                ):
+                    pre_reshape_const = gs.Constant(
+                        matmul_node.name + "_pre_reshape_in",
+                        values=np.array(
+                            [-1, matmul_bias_variable.values.shape[0]], dtype=np.int64
+                        ),
+                    )
+                    inputs = []
+                    inputs.append(input_variable)
+                    inputs.append(pre_reshape_const)
+
+                    reshape_out_variable = gs.Variable(
+                        matmul_node.name + "_pre__reshape_out",
+                        dtype=input_variable.dtype,
+                    )
+                    outputs = [reshape_out_variable]
+
+                    match.update(
+                        {
+                            matmul_node.name
+                            + "_pre__reshape": {
+                                "op": "Reshape",
+                                "inputs": inputs,
+                                "outputs": outputs,
+                                "name": matmul_node.name + "_pre__reshape",
+                                "domain": None,
+                            }
+                        }
+                    )
+
+                    add_node = node
+                    add_bias_variable = get_constant_variable(add_node)
+
+                    output_variable = add_node.inputs[0]
+                    output_variable.outputs.remove(add_node)
+
+                    matmul_bias_transpose_constant = gs.Constant(
+                        matmul_bias_variable.name, values=matmul_bias_variable.values.T
+                    )
+
+                    inputs = []
+                    inputs.append(reshape_out_variable)
+                    inputs.append(matmul_bias_transpose_constant)
+                    inputs.append(add_bias_variable)
+
+                    gemm_out_variable = gs.Variable(
+                        matmul_node.name + "_gemm_out", dtype=output_variable.dtype
+                    )
+                    outputs = [gemm_out_variable]
+
+                    match.update(
+                        {
+                            matmul_node.name: {
+                                "inputs": inputs,
+                                "outputs": outputs,
+                                "name": matmul_node.name,
+                                "attrs": {
+                                    "alpha": 1.0,
+                                    "beta": 1.0,
+                                    "transA": 0,
+                                    "transB": 1,
+                                },
+                                "domain": None,
+                            }
+                        }
+                    )
+
+                    values = input_variable.shape[:-1] + [
+                        matmul_bias_variable.values.shape[-1]
+                    ]
+                    post_reshape_const = gs.Constant(
+                        matmul_node.name + "_post_reshape_in",
+                        values=np.array(values, dtype=np.int64),
+                    )
+
+                    inputs = []
+                    inputs.append(gemm_out_variable)
+                    inputs.append(post_reshape_const)
+                    outputs = list(add_node.outputs)
+
+                    matmul_node.outputs.clear()
+                    add_node.inputs.clear()
+                    add_node.outputs.clear()
+
+                    match.update(
+                        {
+                            matmul_node.name
+                            + "_post_reshape": {
+                                "op": "Reshape",
+                                "inputs": inputs,
+                                "outputs": outputs,
+                                "name": matmul_node.name + "_post_reshape",
+                                "domain": None,
+                            }
+                        }
+                    )
+
+    return match
+
+
 @gs.Graph.register()
 def replace_custom_layer(
     self, op, inputs, outputs, name, attrs=None, domain="ai.onnx.contrib"
@@ -322,7 +503,8 @@ def find_matches(graph, fusion_patterns):
                     if matches:
                         logger.debug(f"matched pattern {layer_type}")
                         for _, match in matches.items():
-                            match.update({"op": layer_type})
+                            if "op" not in match:
+                                match.update({"op": layer_type})
                             if "name" not in match:
                                 match.update(
                                     {
