@@ -114,7 +114,22 @@ class OnnxSlim:
         ).toposort()
         self.model = gs.export_onnx(graph)
 
+    def freeze(self):
+        logger.info("removing not constant initializers from model")
+        inputs = self.model.graph.input
+        name_to_input = {}
+        for input in inputs:
+            if input.name in name_to_input.keys():
+                logger.warning(f"Duplicate input name: {input.name}")
+            name_to_input[input.name] = input
+
+        for initializer in self.model.graph.initializer:
+            if initializer.name in name_to_input:
+                inputs.remove(name_to_input[initializer.name])
+                name_to_input.pop(initializer.name)
+
     def check_point(self):
+        self.freeze()
         self.input_data_dict = gen_onnxruntime_input_data(self.model)
         self.raw_onnx_output = onnxruntime_inference(self.model, self.input_data_dict)
 

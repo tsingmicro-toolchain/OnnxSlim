@@ -478,6 +478,53 @@ def find_matmul_add_nodes(node):
     return match
 
 
+@register_fusion_pattern("Gelu")
+def find_gelu_nodes(node):
+    # fmt: off
+    '''
+             x
+         /      \
+         |     Div
+         |      |
+         |     Erf
+         |      |
+         |     Add
+         \      /
+            Mul
+             |
+            Mul
+    '''
+    # fmt: on
+    match = {}
+    if node.op == "Mul":
+        if (
+            node.i(0).op == "Mul"
+            and node.i(0).i(1).op == "Add"
+            and node.i(0).i(1).i(0).op == "Erf"
+            and node.i(0).i(1).i(0).i(0).op == "Div"
+        ):
+            input_variable = node.i(0).i(1).i(0).i(0).inputs[0]
+            mul_node = node.i(0)
+            div_node = node.i(0).i(1).i(0).i(0)
+
+            input_variable.outputs.remove(mul_node)
+            input_variable.outputs.remove(div_node)
+
+            output_variable = node.outputs[0]
+            output_variable.inputs.clear()
+            match.update(
+                {
+                    node.name: {
+                        "inputs": [input_variable],
+                        "outputs": [output_variable],
+                        "domain": None,
+                    }
+                }
+            )
+
+    return match
+
+
 @gs.Graph.register()
 def replace_custom_layer(
     self, op, inputs, outputs, name, attrs=None, domain="ai.onnx.contrib"
