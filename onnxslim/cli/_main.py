@@ -1,6 +1,6 @@
 def slim(
     model,
-    no_model_check=None,
+    model_check=None,
     output_model=None,
     optimization=None,
     input_shapes=None,
@@ -26,7 +26,7 @@ def slim(
     if optimization and outputs:
         slimmer.output_modification(outputs)
 
-    if not no_model_check:
+    if model_check:
         slimmer.check_point()
 
     if optimization == None:
@@ -48,7 +48,7 @@ def slim(
     if optimization and dtype:
         slimmer.convert_data_format(dtype)
 
-    slimmer.save(output_model, no_model_check)
+    slimmer.save(output_model, model_check)
 
     if not output_model:
         return slimmer.model
@@ -67,32 +67,30 @@ def main():
         description="OnnxSlim: A Toolkit to Help Optimizer Onnx Model",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("input_model", help="Input onnx model")
-    parser.add_argument("output_model", help="Output onnx model")
-    parser.add_argument(
-        "--no_model_check", action="store_true", help="Disable model check"
-    )
+    parser.add_argument("input_model", help="input onnx model")
+    parser.add_argument("output_model", help="output onnx model")
+    parser.add_argument("--model_check", action="store_true", help="enable model check")
     parser.add_argument(
         "-v", "--version", action="version", version=onnxslim.__version__
     )
     subparsers = parser.add_subparsers(title="Optimization", dest="optimization")
 
     optimization_parser = subparsers.add_parser(
-        "optimization", help="Perform Optimization"
+        "optimization", help="perform optimization"
     )
     # Input Shape Modification
     optimization_parser.add_argument(
         "--input_shapes",
         nargs="+",
         type=str,
-        help="Input shape of the model, INPUT_NAME:SHAPE, e.g. x:1,3,224,224 or x1:1,3,224,224 x2:1,3,224,224",
+        help="input shape of the model, INPUT_NAME:SHAPE, e.g. x:1,3,224,224 or x1:1,3,224,224 x2:1,3,224,224",
     )
     # Output Modification
     optimization_parser.add_argument(
         "--outputs",
         nargs="+",
         type=str,
-        help="Output of the model, OUTPUT_NAME:DTYPE, e.g. y:fp32 or y1:fp32 y2:fp32. \
+        help="output of the model, OUTPUT_NAME:DTYPE, e.g. y:fp32 or y1:fp32 y2:fp32. \
                                                                              If dtype is not specified, the dtype of the output will be the same as the original model \
                                                                              if it has dtype, otherwise it will be fp32, available dtype: fp16, fp32, int32",
     )
@@ -101,7 +99,7 @@ def main():
         "--shape_infer",
         choices=["enable", "disable"],
         default="enable",
-        help="Whether to enable shape_infer, default enable.",
+        help="whether to enable shape_infer, default enable.",
     )
 
     # Constant Folding
@@ -109,20 +107,20 @@ def main():
         "--constant_folding",
         choices=["enable", "disable"],
         default="enable",
-        help="Whether to enable shape_infer, default enable.",
+        help="whether to enable shape_infer, default enable.",
     )
 
     # Data Format Conversion
     optimization_parser.add_argument(
         "--dtype",
         choices=["fp16", "fp32"],
-        help="Whether to enable shape_infer, default enable.",
+        help="whether to enable shape_infer, default enable.",
     )
 
     args, unknown = parser.parse_known_args()
 
     if unknown:
-        logger.error(f"Unrecognized Options: {unknown}")
+        logger.error(f"unrecognized options: {unknown}")
         return 1
 
     inputs_shapes = None if not args.optimization else args.input_shapes
@@ -133,7 +131,7 @@ def main():
 
     slim(
         args.input_model,
-        args.no_model_check,
+        args.model_check,
         args.output_model,
         args.optimization,
         inputs_shapes,

@@ -115,7 +115,6 @@ class OnnxSlim:
         self.model = gs.export_onnx(graph)
 
     def freeze(self):
-        logger.info("removing not constant initializers from model")
         inputs = self.model.graph.input
         name_to_input = {}
         for input in inputs:
@@ -218,8 +217,8 @@ class OnnxSlim:
 
         return model_info
 
-    def save(self, model_path, no_model_check=False):
-        if not no_model_check:
+    def save(self, model_path, model_check=False):
+        if model_check:
             self.slimmed_onnx_output = onnxruntime_inference(
                 self.model, self.input_data_dict
             )
@@ -234,9 +233,6 @@ class OnnxSlim:
                     )
                 )
                 logger.warning("Please check the model carefully.")
-                logger.warning(
-                    "If you are sure that the model is correct, please use --no_model_check to skip model check."
-                )
                 return
             else:
                 for key in self.raw_onnx_output.keys():
@@ -249,12 +245,9 @@ class OnnxSlim:
                     ):
                         logger.warning("Model output mismatch after slimming.")
                         logger.warning("Please check the model carefully.")
-                        logger.warning(
-                            "If you are sure that the model is correct, please use --no_model_check to skip model check."
-                        )
                         return
 
-        if not no_model_check:
+        if model_check:
             try:
                 checker.check_model(self.model)
             except ValueError:
