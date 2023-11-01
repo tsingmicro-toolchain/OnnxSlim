@@ -11,7 +11,7 @@ def slim(
 ):
     import os
 
-    from onnxslim.slim import OnnxSlim
+    from onnxslim.core.slim import OnnxSlim
 
     MAX_ITER = (
         10

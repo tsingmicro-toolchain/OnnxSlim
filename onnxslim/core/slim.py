@@ -8,16 +8,21 @@ from onnx import checker
 from tabulate import SEPARATING_LINE, tabulate
 
 import onnxslim.onnx_graphsurgeon as gs
-from .onnx_graphsurgeon.ir.tensor import Constant
-from .onnx_graphsurgeon.logger.logger import G_LOGGER
+from onnxslim.onnx_graphsurgeon.ir.tensor import Constant
+from onnxslim.onnx_graphsurgeon.logger.logger import G_LOGGER
 
 logging.basicConfig(level=logging.ERROR)
 
 from loguru import logger
 
+from ..utils.font import GREEN, WHITE
+from ..utils.utils import (
+    format_bytes,
+    gen_onnxruntime_input_data,
+    onnxruntime_inference,
+)
+
 from .optimizer import optimize_model
-from .utils.font import GREEN, WHITE
-from .utils.utils import format_bytes, gen_onnxruntime_input_data, onnxruntime_inference
 
 DEBUG = bool(os.getenv("ONNXSLIM_DEBUG"))
 
