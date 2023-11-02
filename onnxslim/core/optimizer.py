@@ -285,20 +285,34 @@ def find_slice_nodes(node):
                         )
                         outputs = list(second_slice_node.outputs)
 
+                        first_slice_node.outputs.clear()
                         second_slice_node.inputs.clear()
                         second_slice_node.outputs.clear()
 
-                        match.update(
-                            {
-                                second_slice_node.name: {
-                                    "inputs": inputs,
-                                    "outputs": outputs,
-                                    "name": second_slice_node.name,
-                                    "attrs": second_slice_node.attrs,
-                                    "domain": None,
+                        if len(first_slice_node_users) == 1:
+                            match.update(
+                                {
+                                    first_slice_node.name: {
+                                        "inputs": inputs,
+                                        "outputs": outputs,
+                                        "name": first_slice_node.name,
+                                        "attrs": first_slice_node.attrs,
+                                        "domain": None,
+                                    }
                                 }
-                            }
-                        )
+                            )
+                        else:
+                            match.update(
+                                {
+                                    second_slice_node.name: {
+                                        "inputs": inputs,
+                                        "outputs": outputs,
+                                        "name": second_slice_node.name,
+                                        "attrs": second_slice_node.attrs,
+                                        "domain": None,
+                                    }
+                                }
+                            )
 
     return match
 
@@ -334,11 +348,11 @@ def find_slice_nodes(node):
 
                 match.update(
                     {
-                        second_reshape_node.name: {
+                        first_reshape_node.name: {
                             "inputs": inputs,
                             "outputs": outputs,
-                            "name": second_reshape_node.name,
-                            "attrs": second_reshape_node.attrs,
+                            "name": first_reshape_node.name,
+                            "attrs": first_reshape_node.attrs,
                             "domain": None,
                         }
                     }
