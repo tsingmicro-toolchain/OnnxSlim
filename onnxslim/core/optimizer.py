@@ -134,20 +134,20 @@ def find_conv_nodes(node):
     return match
 
 
-@register_fusion_pattern("ConvTranspose")
+@register_fusion_pattern("ConvBNFusion")
 def find_conv_transpose_nodes(node):
     # fmt: off
     '''
              x
              |
-        ConvTranspose
+      Conv/ConvTranspose
              |
       BatchNormalization
     '''
     # fmt: on
     match = {}
     if node.op == "BatchNormalization":
-        if node.i(0).op == "ConvTranspose":
+        if node.i(0).op == "ConvTranspose" or node.i(0).op == "Conv":
             conv_transpose_node = node.i(0)
             conv_transpose_weight = conv_transpose_node.inputs[1].values
             bn_node = node
@@ -164,14 +164,14 @@ def find_conv_transpose_nodes(node):
 
             bn_var_rsqrt = 1.0 / np.sqrt(bn_running_var + bn_eps)
             shape = [1] * len(conv_transpose_weight.shape)
-            shape[1] = -1
+            if node.i(0).op == "Conv":
+                shape[0] = -1
+            else:
+                shape[1] = -1
             conv_w = conv_transpose_weight * (bn_scale * bn_var_rsqrt).reshape(shape)
             conv_b = (
                 conv_transpose_bias - bn_running_mean
             ) * bn_var_rsqrt * bn_scale + bn_bias
-
-            input_variable = bn_node.inputs[0]
-            input_variable.outputs.remove(bn_node)
 
             inputs = []
             inputs.append(list(conv_transpose_node.inputs)[0])
@@ -181,12 +181,14 @@ def find_conv_transpose_nodes(node):
             inputs.append(gs.Constant(bias_name, values=conv_b))
             outputs = list(bn_node.outputs)
 
+            conv_transpose_node.outputs.clear()
             bn_node.inputs.clear()
             bn_node.outputs.clear()
 
             match.update(
                 {
                     conv_transpose_node.name: {
+                        "op": conv_transpose_node.op,
                         "inputs": inputs,
                         "outputs": outputs,
                         "name": conv_transpose_node.name,
