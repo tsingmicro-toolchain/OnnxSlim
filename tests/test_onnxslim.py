@@ -5,20 +5,20 @@ import pytest
 from utils import download_onnx_from_url
 
 
+@pytest.mark.parametrize(
+    "name",
+    (
+        "swin_tiny",
+        "glm_block_0",
+        "mobilenet_v2",
+        "resnet18",
+        "tf_efficientnetv2_s",
+        "UNetModel-fp16",
+        "dinov2",
+        "unet",
+    ),
+)
 class TestOnnxModel:
-    @pytest.mark.parametrize(
-        "name",
-        (
-            "swin_tiny",
-            "glm_block_0",
-            "mobilenet_v2",
-            "resnet18",
-            "tf_efficientnetv2_s",
-            "UNetModel-fp16",
-            "dinov2",
-            "unet",
-        ),
-    )
     def test_onnx_model(self, request, name):
         filename = download_onnx_from_url(
             f"http://120.224.26.32:15030/aifarm/onnx/{name}.onnx"
@@ -29,6 +29,17 @@ class TestOnnxModel:
         # Assert the expected return code
         print(output)
         assert result.returncode == 0
+
+    def test_onnxslim_python_api(self, request, name):
+        import onnx
+        from onnxslim import slim
+
+        filename = download_onnx_from_url(
+            f"http://120.224.26.32:15030/aifarm/onnx/{name}.onnx"
+        )
+        print(slim)
+        model_slim = slim(filename)
+        onnx.save(model_slim, f"{name}_slim.onnx")
 
 
 if __name__ == "__main__":
