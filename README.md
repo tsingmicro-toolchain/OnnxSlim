@@ -10,6 +10,9 @@ pip install onnxslim
 ```
 onnxslim your_onnx_model slimmed_onnx_model
 ```
+
+<div align=left><img src="image/onnxslim.gif"></div>
+
 For more usage, see onnxslim -h or refer to our example 
 
 # References
