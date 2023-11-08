@@ -77,7 +77,7 @@ def graph_constant_fold_inplace(graph):
 
 
 @register_fusion_pattern("Conv")
-def find_conv_nodes(node):
+def find_conv_nodes(node, opset):
     # fmt: off
     '''
              x
@@ -135,7 +135,7 @@ def find_conv_nodes(node):
 
 
 @register_fusion_pattern("ConvBNFusion")
-def find_conv_transpose_nodes(node):
+def find_conv_transpose_nodes(node, opset):
     # fmt: off
     '''
              x
@@ -202,7 +202,7 @@ def find_conv_transpose_nodes(node):
 
 
 @register_fusion_pattern("Slice")
-def find_slice_nodes(node):
+def find_slice_nodes(node, opset):
     # fmt: off
     '''
              x
@@ -320,7 +320,7 @@ def find_slice_nodes(node):
 
 
 @register_fusion_pattern("Reshape")
-def find_slice_nodes(node):
+def find_slice_nodes(node, opset):
     # fmt: off
     '''
              x
@@ -364,7 +364,7 @@ def find_slice_nodes(node):
 
 
 @register_fusion_pattern("Gemm")
-def find_matmul_add_nodes(node):
+def find_matmul_add_nodes(node, opset):
     # fmt: off
     '''
              x
@@ -495,7 +495,7 @@ def find_matmul_add_nodes(node):
 
 
 @register_fusion_pattern("Gelu")
-def find_gelu_nodes(node):
+def find_gelu_nodes(node, opset):
     # fmt: off
     '''
              x
@@ -541,6 +541,58 @@ def find_gelu_nodes(node):
     return match
 
 
+@register_fusion_pattern("Reduce")
+def find_slice_nodes(node, opset):
+    # fmt: off
+    '''
+             x
+             |
+         ReduceSum
+             |
+         Unsqueeze
+    '''
+    # fmt: on
+    match = {}
+    if node.op == "Unsqueeze":
+        if node.i(0).op == "ReduceSum":
+            reduce_node = node.i(0)
+            reduce_node_node_users = get_node_users(reduce_node)
+            if len(reduce_node_node_users) == 1:
+                unsqueeze_node = node
+
+                reduce_node_axes = reduce_node.attrs.get("axes", None)
+                reduce_node_keepdims = reduce_node.attrs.get("keepdims", 1)
+                unsqueeze_node_axes = unsqueeze_node.attrs.get("axes", None)
+
+                if (
+                    opset < 13
+                    and reduce_node_axes == [-1]
+                    and unsqueeze_node_axes == [-1]
+                    and reduce_node_keepdims == 0
+                ):
+                    inputs = list(reduce_node.inputs)
+                    outputs = list(unsqueeze_node.outputs)
+                    attrs = reduce_node.attrs
+                    reduce_node.outputs.clear()
+                    unsqueeze_node.inputs.clear()
+                    unsqueeze_node.outputs.clear()
+                    attrs["keepdims"] = 1
+                    match.update(
+                        {
+                            reduce_node.name: {
+                                "op": reduce_node.op,
+                                "inputs": inputs,
+                                "outputs": outputs,
+                                "name": reduce_node.name,
+                                "attrs": attrs,
+                                "domain": None,
+                            }
+                        }
+                    )
+
+    return match
+
+
 @gs.Graph.register()
 def replace_custom_layer(
     self, op, inputs, outputs, name, attrs=None, domain="ai.onnx.contrib"
@@ -556,13 +608,14 @@ def replace_custom_layer(
 
 
 def find_matches(graph, fusion_patterns):
+    opset = graph.opset
     match_map = {}
     counter = Counter()
     for node in reversed(graph.nodes):
         if node.name not in match_map:
             for layer_type, func in fusion_patterns.items():
                 with contextlib.suppress(IndexError):
-                    matches = func(node)
+                    matches = func(node, opset)
                     if matches:
                         logger.debug(f"matched pattern {layer_type}")
                         for _, match in matches.items():
