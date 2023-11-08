@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+from pathlib import Path
 
 import numpy as np
 import onnx
@@ -32,6 +33,7 @@ class OnnxSlim:
         self.init_logging(log_level)
         if isinstance(model, str):
             self.model = onnx.load(model)
+            self.model_name = Path(model).name
         else:
             self.model = model
         self.float_info = self.summarize(self.model)
@@ -174,6 +176,28 @@ class OnnxSlim:
     def summary(self):
         self.slimmed_info = self.summarize(self.model)
         final_op_info = []
+        final_op_info.append(["Model Name", self.model_name])
+        final_op_info.append([SEPARATING_LINE])
+
+        all_inputs = list(self.float_info["op_input_info"].keys())
+
+        for inputs in all_inputs:
+            float_shape = self.float_info["op_input_info"].get(inputs, None)
+            slimmed_shape = self.slimmed_info["op_input_info"].get(inputs, None)
+            final_op_info.append(["IN: " + inputs, float_shape, slimmed_shape])
+
+        final_op_info.append([SEPARATING_LINE, SEPARATING_LINE, SEPARATING_LINE])
+
+        all_outputs = list(self.float_info["op_output_info"].keys())
+
+        for outputs in all_outputs:
+            float_shape = self.float_info["op_output_info"].get(outputs, None)
+            slimmed_shape = self.slimmed_info["op_output_info"].get(outputs, None)
+            final_op_info.append(["OUT: " + outputs, float_shape, slimmed_shape])
+
+        final_op_info.append([SEPARATING_LINE, SEPARATING_LINE, SEPARATING_LINE])
+        final_op_info.append(["OP TYPE", "Original Model", "Slimmed Model"])
+        final_op_info.append([SEPARATING_LINE])
         all_ops = set(
             list(self.float_info["op_type_counts"].keys())
             + list(self.slimmed_info["op_type_counts"].keys())
@@ -189,14 +213,14 @@ class OnnxSlim:
         final_op_info.append([SEPARATING_LINE, SEPARATING_LINE, SEPARATING_LINE])
         final_op_info.append(
             [
-                "model_size",
+                "Model Size",
                 format_bytes(self.float_info["model_size"]),
                 format_bytes(self.slimmed_info["model_size"]),
             ]
         )
         lines = tabulate(
             final_op_info,
-            headers=["OP_TYPE", "Original Model", "Slimmed Model"],
+            headers=[],
             tablefmt="pretty",
         ).split("\n")
         output = "\n".join([line if line != "| \x01 |" else lines[0] for line in lines])
@@ -219,6 +243,25 @@ class OnnxSlim:
                 op_type_counts[op_type] = 1
 
         model_info["op_type_counts"] = op_type_counts
+
+        def get_shape(inputs):
+            op_shape_info = {}
+            for input in inputs:
+                if input.type.tensor_type.HasField("shape"):
+                    shape = []
+                    for dim in input.type.tensor_type.shape.dim:
+                        if dim.HasField("dim_param"):
+                            shape.append(dim.dim_param)
+                        elif dim.HasField("dim_value"):
+                            shape.append(dim.dim_value)
+                        else:
+                            shape.append(None)
+                    op_shape_info[input.name] = tuple(shape)
+
+            return op_shape_info
+
+        model_info["op_input_info"] = get_shape(model.graph.input)
+        model_info["op_output_info"] = get_shape(model.graph.output)
 
         return model_info
 
