@@ -56,6 +56,16 @@ class OnnxSlim:
 
         ort.set_default_logger_severity(3)
 
+    def get_opset(self, model):
+        try:
+            for importer in model.opset_import:
+                if importer.domain == "" or importer.domain == "ai.onnx":
+                    return importer.version
+
+            return None
+        except:
+            return None
+
     def input_shape_modification(self, input_shapes):
         if not input_shapes:
             return
@@ -176,8 +186,17 @@ class OnnxSlim:
     def summary(self):
         self.slimmed_info = self.summarize(self.model)
         final_op_info = []
-        final_op_info.append(["Model Name", self.model_name])
+        final_op_info.append(
+            [
+                "Model Name",
+                self.model_name,
+                "Op Set: " + str(self.get_opset(self.model)),
+            ]
+        )
         final_op_info.append([SEPARATING_LINE])
+
+        final_op_info.append(["Model Info", "Original Model", "Slimmed Model"])
+        final_op_info.append([SEPARATING_LINE, SEPARATING_LINE, SEPARATING_LINE])
 
         all_inputs = list(self.float_info["op_input_info"].keys())
 
@@ -185,8 +204,6 @@ class OnnxSlim:
             float_shape = self.float_info["op_input_info"].get(inputs, None)
             slimmed_shape = self.slimmed_info["op_input_info"].get(inputs, None)
             final_op_info.append(["IN: " + inputs, float_shape, slimmed_shape])
-
-        final_op_info.append([SEPARATING_LINE, SEPARATING_LINE, SEPARATING_LINE])
 
         all_outputs = list(self.float_info["op_output_info"].keys())
 
