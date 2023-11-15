@@ -406,7 +406,7 @@ def find_matmul_add_nodes(node, opset):
                     inputs.append(pre_reshape_const)
 
                     reshape_out_variable = gs.Variable(
-                        matmul_node.name + "_pre__reshape_out",
+                        matmul_node.name + "_pre_reshape_out",
                         dtype=input_variable.dtype,
                     )
                     outputs = [reshape_out_variable]
@@ -414,11 +414,11 @@ def find_matmul_add_nodes(node, opset):
                     match.update(
                         {
                             matmul_node.name
-                            + "_pre__reshape": {
+                            + "_pre_reshape": {
                                 "op": "Reshape",
                                 "inputs": inputs,
                                 "outputs": outputs,
-                                "name": matmul_node.name + "_pre__reshape",
+                                "name": matmul_node.name + "_pre_reshape",
                                 "domain": None,
                             }
                         }

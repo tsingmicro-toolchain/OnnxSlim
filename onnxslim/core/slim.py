@@ -66,6 +66,18 @@ class OnnxSlim:
         except:
             return None
 
+    def clear_value_info(self):
+        graph = gs.import_onnx(self.model)
+        input_names = [input.name for input in graph.inputs]
+        tensors = graph.tensors()
+        for _, tensor in tensors.items():
+            if tensor.name not in input_names:
+                if isinstance(tensor, Constant):
+                    continue
+                tensor.shape = None
+
+        self.model = gs.export_onnx(graph)
+
     def input_shape_modification(self, input_shapes):
         if not input_shapes:
             return
@@ -75,7 +87,7 @@ class OnnxSlim:
         tensors = graph.tensors()
 
         for input_shape in input_shapes:
-            key, values = input_shape.split(":")
+            key, values = input_shape.rsplit(":", 1)
             values_list = [int(value) for value in values.split(",")]
             if key not in input_names:
                 raise Exception(
@@ -96,7 +108,7 @@ class OnnxSlim:
         graph.outputs.clear()
         tensors = graph.tensors()
         for output in outputs:
-            values = output.split(":")
+            values = output.rsplit(":", 1)
             if len(values) == 1:
                 key = values[0]
                 if key not in tensors.keys():
@@ -152,11 +164,14 @@ class OnnxSlim:
     def shape_infer(self):
         import onnxruntime.tools.symbolic_shape_infer as onnxrt_symbolic_shape_inference
 
-        self.model = (
-            onnxrt_symbolic_shape_inference.SymbolicShapeInference.infer_shapes(
-                self.model, auto_merge=True
+        try:
+            self.model = (
+                onnxrt_symbolic_shape_inference.SymbolicShapeInference.infer_shapes(
+                    self.model, auto_merge=True
+                )
             )
-        )
+        except:
+            self.model = onnx.shape_inference.infer_shapes(self.model)
         if DEBUG:
             onnx.save(self.model, "debug_shape_infer.onnx")
 
@@ -284,6 +299,12 @@ class OnnxSlim:
 
     def save(self, model_path, model_check=False):
         if model_check:
+            try:
+                checker.check_model(self.model)
+            except ValueError:
+                logger.warning("Model too large and cannot be checked.")
+
+        if model_check:
             self.slimmed_onnx_output = onnxruntime_inference(
                 self.model, self.input_data_dict
             )
@@ -311,12 +332,6 @@ class OnnxSlim:
                         logger.warning("Model output mismatch after slimming.")
                         logger.warning("Please check the model carefully.")
                         return
-
-        if model_check:
-            try:
-                checker.check_model(self.model)
-            except ValueError:
-                logger.warning("Model too large and cannot be checked.")
 
         if model_path:
             try:
