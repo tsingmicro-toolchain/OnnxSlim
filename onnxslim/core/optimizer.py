@@ -643,9 +643,7 @@ def optimize_model(model):
     for _, match in fusion_pairs.items():
         graph.replace_custom_layer(**match)
     graph_constant_fold_inplace(graph)
-    graph.cleanup(
-        remove_unused_node_outputs=True, remove_unused_graph_inputs=True
-    ).toposort()
+    graph.cleanup(remove_unused_graph_inputs=True).toposort()
     model = gs.export_onnx(graph)
 
     return model

@@ -56,16 +56,21 @@ class OnnxExporter(BaseExporter):
             )
 
         if tensor.dtype is not None:
-            if tensor.type == "tensor_type":
+            if hasattr(tensor, "type"):
+                if tensor.type == "tensor_type":
+                    onnx_tensor = onnx.helper.make_tensor_value_info(
+                        tensor.name, dtype_to_onnx(tensor.dtype), tensor.shape
+                    )
+                elif tensor.type == "sequence_type":
+                    onnx_tensor = onnx.helper.make_tensor_sequence_value_info(
+                        tensor.name, dtype_to_onnx(tensor.dtype), tensor.shape
+                    )
+                elif tensor.type == "sparse_tensor_type":
+                    onnx_tensor = onnx.helper.make_sparse_tensor_value_info(
+                        tensor.name, dtype_to_onnx(tensor.dtype), tensor.shape
+                    )
+            else:
                 onnx_tensor = onnx.helper.make_tensor_value_info(
-                    tensor.name, dtype_to_onnx(tensor.dtype), tensor.shape
-                )
-            elif tensor.type == "sequence_type":
-                onnx_tensor = onnx.helper.make_tensor_sequence_value_info(
-                    tensor.name, dtype_to_onnx(tensor.dtype), tensor.shape
-                )
-            elif tensor.type == "sparse_tensor_type":
-                onnx_tensor = onnx.helper.make_sparse_tensor_value_info(
                     tensor.name, dtype_to_onnx(tensor.dtype), tensor.shape
                 )
         else:

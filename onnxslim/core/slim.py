@@ -138,9 +138,7 @@ class OnnxSlim:
                 tensors[key].to_variable(dtype=dtype, shape=tensors[key].shape)
             )
 
-        graph.cleanup(
-            remove_unused_node_outputs=True, remove_unused_graph_inputs=True
-        ).toposort()
+        graph.cleanup(remove_unused_graph_inputs=True).toposort()
         self.model = gs.export_onnx(graph)
 
     def freeze(self):
