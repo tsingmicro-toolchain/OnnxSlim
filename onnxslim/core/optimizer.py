@@ -490,7 +490,45 @@ def find_matmul_add_nodes(node, opset):
                             }
                         }
                     )
+                elif (
+                    input_variable.shape
+                    and len(input_variable.shape) == 2
+                    and all([isinstance(value, int) for value in input_variable.shape])
+                ):
+                    add_node = node
+                    add_bias_variable = get_constant_variable(add_node)
 
+                    output_variable = add_node.inputs[0]
+                    output_variable.outputs.remove(add_node)
+
+                    matmul_bias_transpose_constant = gs.Constant(
+                        matmul_bias_variable.name, values=matmul_bias_variable.values.T
+                    )
+
+                    inputs = []
+                    inputs.append(input_variable)
+                    inputs.append(matmul_bias_transpose_constant)
+                    inputs.append(add_bias_variable)
+
+                    outputs = list(add_node.outputs)
+                    add_node.inputs.clear()
+                    add_node.outputs.clear()
+                    match.update(
+                        {
+                            matmul_node.name: {
+                                "inputs": inputs,
+                                "outputs": outputs,
+                                "name": matmul_node.name,
+                                "attrs": {
+                                    "alpha": 1.0,
+                                    "beta": 1.0,
+                                    "transA": 0,
+                                    "transB": 1,
+                                },
+                                "domain": None,
+                            }
+                        }
+                    )
     return match
 
 
