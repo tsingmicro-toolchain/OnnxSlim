@@ -24,18 +24,27 @@ def onnx_dtype_to_numpy(onnx_dtype):
 
 
 def gen_onnxruntime_input_data(model):
-    input_info = [
-        (
-            input_tensor.name,
-            [dim.dim_value for dim in input_tensor.type.tensor_type.shape.dim],
-            onnx_dtype_to_numpy(input_tensor.type.tensor_type.elem_type),
-        )
-        for input_tensor in model.graph.input
-    ]
+    input_info = []
+    for input_tensor in model.graph.input:
+        name = input_tensor.name
+        shape = []
+        for dim in input_tensor.type.tensor_type.shape.dim:
+            if dim.HasField("dim_param"):
+                shape.append(dim.dim_param)
+            elif dim.HasField("dim_value"):
+                shape.append(dim.dim_value)
+            else:
+                shape.append(None)
+        dtype = onnx_dtype_to_numpy(input_tensor.type.tensor_type.elem_type)
+
+        input_info.append([name, shape, dtype])
 
     input_data_dict = {}
     for name, shapes, dtype in input_info:
-        shapes = [shape if shape != -1 else 1 for shape in shapes]
+        shapes = [
+            shape if (shape != -1 and not isinstance(shape, str)) else 1
+            for shape in shapes
+        ]
         shapes = shapes if shapes else [1]
         if dtype in [np.int32, np.int64]:
             random_data = np.random.randint(10, size=shapes).astype(dtype)
