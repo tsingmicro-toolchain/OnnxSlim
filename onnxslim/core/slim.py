@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 from pathlib import Path
+from typing import Dict, List, Union
 
 import numpy as np
 import onnx
@@ -29,7 +30,7 @@ DEBUG = bool(os.getenv("ONNXSLIM_DEBUG"))
 
 
 class OnnxSlim:
-    def __init__(self, model, log_level=1):
+    def __init__(self, model: Union[str, onnx.ModelProto], log_level: int = 1):
         self.init_logging(log_level)
         if isinstance(model, str):
             self.model = onnx.load(model)
@@ -38,7 +39,7 @@ class OnnxSlim:
             self.model = model
         self.float_info = self.summarize(self.model)
 
-    def init_logging(self, log_level):
+    def init_logging(self, log_level: int):
         logger.remove()
         if log_level == 0 or DEBUG:  # DEBUG
             logger.add(sys.stderr, level=G_LOGGER.DEBUG)
@@ -56,7 +57,7 @@ class OnnxSlim:
 
         ort.set_default_logger_severity(3)
 
-    def get_opset(self, model):
+    def get_opset(self, model: onnx.ModelProto) -> int:
         try:
             for importer in model.opset_import:
                 if importer.domain == "" or importer.domain == "ai.onnx":
@@ -66,7 +67,7 @@ class OnnxSlim:
         except:
             return None
 
-    def clear_value_info(self):
+    def clear_value_info(self) -> onnx.ModelProto:
         graph = gs.import_onnx(self.model)
         input_names = [input.name for input in graph.inputs]
         tensors = graph.tensors()
@@ -78,7 +79,7 @@ class OnnxSlim:
 
         self.model = gs.export_onnx(graph)
 
-    def input_shape_modification(self, input_shapes):
+    def input_shape_modification(self, input_shapes: str) -> onnx.ModelProto:
         if not input_shapes:
             return
 
@@ -103,7 +104,7 @@ class OnnxSlim:
 
         self.model = gs.export_onnx(graph)
 
-    def output_modification(self, outputs):
+    def output_modification(self, outputs: str) -> onnx.ModelProto:
         graph = gs.import_onnx(self.model)
         graph.outputs.clear()
         tensors = graph.tensors()
@@ -173,7 +174,7 @@ class OnnxSlim:
         if DEBUG:
             onnx.save(self.model, "debug_shape_infer.onnx")
 
-    def slim(self, data_prop=True):
+    def slim(self):
         graph = gs.import_onnx(self.model).toposort()
         graph.fold_constants().cleanup().toposort()
         self.model = gs.export_onnx(graph)
@@ -181,7 +182,7 @@ class OnnxSlim:
         if DEBUG:
             onnx.save(self.model, "debug_slim.onnx")
 
-    def convert_data_format(self, dtype):
+    def convert_data_format(self, dtype: str) -> onnx.ModelProto:
         if dtype == "fp16":
             from onnxconverter_common import float16
 
@@ -257,7 +258,7 @@ class OnnxSlim:
 
         print(output)
 
-    def summarize(self, model):
+    def summarize(self, model: onnx.ModelProto) -> Dict:
         model_info = {}
 
         model_size = model.ByteSize()
@@ -274,7 +275,7 @@ class OnnxSlim:
 
         model_info["op_type_counts"] = op_type_counts
 
-        def get_shape(inputs):
+        def get_shape(inputs: onnx.ModelProto) -> Dict[str, List[int]]:
             op_shape_info = {}
             for input in inputs:
                 if input.type.tensor_type.HasField("shape"):
@@ -295,7 +296,7 @@ class OnnxSlim:
 
         return model_info
 
-    def save(self, model_path, model_check=False):
+    def save(self, model_path: str, model_check: bool = False):
         if model_check:
             try:
                 checker.check_model(self.model)
@@ -348,7 +349,7 @@ class OnnxSlim:
                     "Model too large and saved as external data automatically."
                 )
 
-    def is_converged(self, iter):
+    def is_converged(self, iter: int) -> bool:
         logger.debug(f"optimization iter: {iter}")
         slimmed_info = self.summarize(self.model)
         if "Shape" not in slimmed_info["op_type_counts"].keys():

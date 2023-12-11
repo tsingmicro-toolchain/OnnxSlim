@@ -1,13 +1,18 @@
+from typing import Union
+
+import onnx
+
+
 def slim(
-    model,
-    model_check=None,
-    output_model=None,
-    optimization=None,
-    input_shapes=None,
-    outputs=None,
-    shape_infer=None,
-    constant_folding=None,
-    dtype=None,
+    model: Union[str, onnx.ModelProto],
+    model_check: bool = None,
+    output_model: str = None,
+    optimization: bool = None,
+    input_shapes: str = None,
+    outputs: str = None,
+    shape_infer: str = None,
+    constant_folding: str = None,
+    dtype: str = None,
 ):
     import os
 

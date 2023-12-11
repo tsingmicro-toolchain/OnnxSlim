@@ -1,12 +1,16 @@
 import contextlib
-
 from collections import Counter, OrderedDict
 
+from typing import List
+
 import numpy as np
+
+import onnx
 from loguru import logger
 
 import onnxslim.onnx_graphsurgeon as gs
 from onnxslim.onnx_graphsurgeon.exporters.onnx_exporter import dtype_to_onnx
+from onnxslim.onnx_graphsurgeon.ir.graph import Graph
 from onnxslim.onnx_graphsurgeon.ir.tensor import Constant
 
 
@@ -633,7 +637,13 @@ def find_slice_nodes(node, opset):
 
 @gs.Graph.register()
 def replace_custom_layer(
-    self, op, inputs, outputs, name, attrs=None, domain="ai.onnx.contrib"
+    self,
+    op: str,
+    inputs,
+    outputs: List[str],
+    name: str,
+    attrs: dict = None,
+    domain: str = "ai.onnx.contrib",
 ):
     return self.layer(
         op=op,
@@ -645,7 +655,7 @@ def replace_custom_layer(
     )
 
 
-def find_matches(graph, fusion_patterns):
+def find_matches(graph: Graph, fusion_patterns: dict):
     opset = graph.opset
     match_map = {}
     counter = Counter()
@@ -673,7 +683,7 @@ def find_matches(graph, fusion_patterns):
     return match_map
 
 
-def optimize_model(model):
+def optimize_model(model: onnx.ModelProto) -> onnx.ModelProto:
     graph = gs.import_onnx(model)
     graph.fold_constants().cleanup()
     fusion_patterns = get_default_fusion_patterns()
