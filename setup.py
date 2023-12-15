@@ -25,7 +25,7 @@ setup(
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
     license="MIT",
-    install_requires=["loguru", "tabulate", "onnx"],
+    install_requires=["loguru", "onnx"],
     packages=find_packages(exclude=("tests", "tests.*")),
     entry_points={"console_scripts": ["onnxslim=onnxslim.cli:main"]},
     zip_safe=True,

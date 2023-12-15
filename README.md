@@ -19,6 +19,7 @@ For more usage, see onnxslim -h or refer to our example
 > * [onnx-graphsurgeon](https://github.com/NVIDIA/TensorRT/tree/main/tools/onnx-graphsurgeon)
 > * [Polygraphy](https://github.com/NVIDIA/TensorRT/tree/main/tools/Polygraphy/polygraphy)
 > * [onnx-simplifier](https://github.com/daquexian/onnx-simplifier)
+> * [tabulate](https://github.com/astanin/python-tabulate)
 
 # Contact
 QQ Group: 873569894

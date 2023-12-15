@@ -7,7 +7,6 @@ from typing import Dict, List, Union
 import numpy as np
 import onnx
 from onnx import checker
-from tabulate import SEPARATING_LINE, tabulate
 
 import onnxslim.onnx_graphsurgeon as gs
 from onnxslim.onnx_graphsurgeon.ir.tensor import Constant
@@ -18,6 +17,8 @@ logging.basicConfig(level=logging.ERROR)
 from loguru import logger
 
 from ..utils.font import GREEN, WHITE
+
+from ..utils.tabulate import SEPARATING_LINE, tabulate
 from ..utils.utils import (
     format_bytes,
     gen_onnxruntime_input_data,
@@ -250,9 +251,7 @@ class OnnxSlim:
             ]
         )
         lines = tabulate(
-            final_op_info,
-            headers=[],
-            tablefmt="pretty",
+            final_op_info, headers=[], tablefmt="pretty", maxcolwidths=[None, 32, 32]
         ).split("\n")
         output = "\n".join([line if line != "| \x01 |" else lines[0] for line in lines])
 
