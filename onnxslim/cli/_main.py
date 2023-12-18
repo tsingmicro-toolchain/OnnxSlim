@@ -122,6 +122,13 @@ def main():
         help="whether to enable shape_infer, default enable.",
     )
 
+    optimization_parser.add_argument(
+        "--skip_fusion_patterns",
+        nargs="+",
+        choices=list(onnxslim.DEFAULT_FUSION_PATTERNS.keys()),
+        help="whether to skip the fusion of some patterns",
+    )
+
     args, unknown = parser.parse_known_args()
 
     if unknown:

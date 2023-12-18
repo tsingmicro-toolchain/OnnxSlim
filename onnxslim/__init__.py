@@ -2,6 +2,7 @@ import os
 import warnings
 
 from .cli import slim
+from .core.optimizer import DEFAULT_FUSION_PATTERNS
 from .version import __version__
 
 
