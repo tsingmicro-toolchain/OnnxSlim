@@ -175,11 +175,11 @@ class OnnxSlim:
         if DEBUG:
             onnx.save(self.model, "debug_shape_infer.onnx")
 
-    def slim(self):
+    def slim(self, skip_fusion_patterns: str = None):
         graph = gs.import_onnx(self.model).toposort()
         graph.fold_constants().cleanup().toposort()
         self.model = gs.export_onnx(graph)
-        self.model = optimize_model(self.model)
+        self.model = optimize_model(self.model, skip_fusion_patterns)
         if DEBUG:
             onnx.save(self.model, "debug_slim.onnx")
 

@@ -27,8 +27,13 @@ def register_fusion_pattern(layer_type):
     return insert
 
 
-def get_default_fusion_patterns():
-    return DEFAULT_FUSION_PATTERNS
+def get_fusion_patterns(skip_fusion_patterns: str = None):
+    default_fusion_patterns = DEFAULT_FUSION_PATTERNS
+    if skip_fusion_patterns:
+        for pattern in skip_fusion_patterns:
+            default_fusion_patterns.pop(pattern)
+
+    return default_fusion_patterns
 
 
 def get_node_users(node):
@@ -80,7 +85,7 @@ def graph_constant_fold_inplace(graph):
                 delete_node(node)
 
 
-@register_fusion_pattern("Conv")
+@register_fusion_pattern("FusionPadConv")
 def find_conv_nodes(node, opset):
     # fmt: off
     '''
@@ -126,6 +131,7 @@ def find_conv_nodes(node, opset):
             match.update(
                 {
                     node.name: {
+                        "op": "Conv",
                         "inputs": inputs,
                         "outputs": outputs,
                         "name": node.name,
@@ -138,7 +144,7 @@ def find_conv_nodes(node, opset):
     return match
 
 
-@register_fusion_pattern("ConvBNFusion")
+@register_fusion_pattern("FusionConvBN")
 def find_conv_transpose_nodes(node, opset):
     # fmt: off
     '''
@@ -205,7 +211,7 @@ def find_conv_transpose_nodes(node, opset):
     return match
 
 
-@register_fusion_pattern("Slice")
+@register_fusion_pattern("EliminationSlice")
 def find_slice_nodes(node, opset):
     # fmt: off
     '''
@@ -299,6 +305,7 @@ def find_slice_nodes(node, opset):
                             match.update(
                                 {
                                     first_slice_node.name: {
+                                        "op": "Slice",
                                         "inputs": inputs,
                                         "outputs": outputs,
                                         "name": first_slice_node.name,
@@ -311,6 +318,7 @@ def find_slice_nodes(node, opset):
                             match.update(
                                 {
                                     second_slice_node.name: {
+                                        "op": "Slice",
                                         "inputs": inputs,
                                         "outputs": outputs,
                                         "name": second_slice_node.name,
@@ -323,7 +331,7 @@ def find_slice_nodes(node, opset):
     return match
 
 
-@register_fusion_pattern("Reshape")
+@register_fusion_pattern("EliminationReshape")
 def find_slice_nodes(node, opset):
     # fmt: off
     '''
@@ -355,6 +363,7 @@ def find_slice_nodes(node, opset):
                 match.update(
                     {
                         first_reshape_node.name: {
+                            "op": "Reshape",
                             "inputs": inputs,
                             "outputs": outputs,
                             "name": first_reshape_node.name,
@@ -367,7 +376,7 @@ def find_slice_nodes(node, opset):
     return match
 
 
-@register_fusion_pattern("Gemm")
+@register_fusion_pattern("FusionGemm")
 def find_matmul_add_nodes(node, opset):
     # fmt: off
     '''
@@ -451,6 +460,7 @@ def find_matmul_add_nodes(node, opset):
                     match.update(
                         {
                             matmul_node.name: {
+                                "op": "Gemm",
                                 "inputs": inputs,
                                 "outputs": outputs,
                                 "name": matmul_node.name,
@@ -520,6 +530,7 @@ def find_matmul_add_nodes(node, opset):
                     match.update(
                         {
                             matmul_node.name: {
+                                "op": "Gemm",
                                 "inputs": inputs,
                                 "outputs": outputs,
                                 "name": matmul_node.name,
@@ -536,7 +547,7 @@ def find_matmul_add_nodes(node, opset):
     return match
 
 
-@register_fusion_pattern("Gelu")
+@register_fusion_pattern("FusionGelu")
 def find_gelu_nodes(node, opset):
     # fmt: off
     '''
@@ -573,6 +584,7 @@ def find_gelu_nodes(node, opset):
             match.update(
                 {
                     node.name: {
+                        "op": "Gelu",
                         "inputs": [input_variable],
                         "outputs": [output_variable],
                         "domain": None,
@@ -583,7 +595,7 @@ def find_gelu_nodes(node, opset):
     return match
 
 
-@register_fusion_pattern("Reduce")
+@register_fusion_pattern("FusionReduce")
 def find_slice_nodes(node, opset):
     # fmt: off
     '''
@@ -683,10 +695,12 @@ def find_matches(graph: Graph, fusion_patterns: dict):
     return match_map
 
 
-def optimize_model(model: onnx.ModelProto) -> onnx.ModelProto:
+def optimize_model(
+    model: onnx.ModelProto, skip_fusion_patterns: str = None
+) -> onnx.ModelProto:
     graph = gs.import_onnx(model)
     graph.fold_constants().cleanup()
-    fusion_patterns = get_default_fusion_patterns()
+    fusion_patterns = get_fusion_patterns(skip_fusion_patterns)
     fusion_pairs = find_matches(graph, fusion_patterns)
     for _, match in fusion_pairs.items():
         graph.replace_custom_layer(**match)

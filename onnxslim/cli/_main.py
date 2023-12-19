@@ -13,6 +13,7 @@ def slim(
     shape_infer: str = None,
     constant_folding: str = None,
     dtype: str = None,
+    skip_fusion_patterns: str = None,
 ):
     import os
 
@@ -44,7 +45,7 @@ def slim(
 
     if optimization == None or constant_folding == "enable":
         while MAX_ITER > 0:
-            slimmer.slim()
+            slimmer.slim(skip_fusion_patterns)
             slimmer.shape_infer()
             if slimmer.is_converged(MAX_ITER):
                 break
@@ -140,6 +141,7 @@ def main():
     shape_infer = None if not args.optimization else args.shape_infer
     constant_folding = None if not args.optimization else args.constant_folding
     dtype = None if not args.optimization else args.dtype
+    skip_fusion_patterns = None if not args.optimization else args.skip_fusion_patterns
 
     slim(
         args.input_model,
@@ -151,6 +153,7 @@ def main():
         shape_infer,
         constant_folding,
         dtype,
+        skip_fusion_patterns,
     )
 
     return 0
