@@ -38,6 +38,8 @@ class OnnxSlim:
             self.model_name = Path(model).name
         else:
             self.model = model
+
+        self.freeze()
         self.float_info = self.summarize(self.model)
 
     def init_logging(self, log_level: int):
@@ -157,7 +159,6 @@ class OnnxSlim:
                 name_to_input.pop(initializer.name)
 
     def check_point(self):
-        self.freeze()
         self.input_data_dict = gen_onnxruntime_input_data(self.model)
         self.raw_onnx_output = onnxruntime_inference(self.model, self.input_data_dict)
 
@@ -216,15 +217,15 @@ class OnnxSlim:
         all_inputs = list(self.float_info["op_input_info"].keys())
 
         for inputs in all_inputs:
-            float_shape = self.float_info["op_input_info"].get(inputs, None)
-            slimmed_shape = self.slimmed_info["op_input_info"].get(inputs, None)
+            float_shape = self.float_info["op_input_info"].get(inputs, "")
+            slimmed_shape = self.slimmed_info["op_input_info"].get(inputs, "")
             final_op_info.append(["IN: " + inputs, float_shape, slimmed_shape])
 
         all_outputs = list(self.float_info["op_output_info"].keys())
 
         for outputs in all_outputs:
-            float_shape = self.float_info["op_output_info"].get(outputs, None)
-            slimmed_shape = self.slimmed_info["op_output_info"].get(outputs, None)
+            float_shape = self.float_info["op_output_info"].get(outputs, "")
+            slimmed_shape = self.slimmed_info["op_output_info"].get(outputs, "")
             final_op_info.append(["OUT: " + outputs, float_shape, slimmed_shape])
 
         final_op_info.append([SEPARATING_LINE, SEPARATING_LINE, SEPARATING_LINE])
