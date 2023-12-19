@@ -28,7 +28,7 @@ def register_fusion_pattern(layer_type):
 
 
 def get_fusion_patterns(skip_fusion_patterns: str = None):
-    default_fusion_patterns = DEFAULT_FUSION_PATTERNS
+    default_fusion_patterns = DEFAULT_FUSION_PATTERNS.copy()
     if skip_fusion_patterns:
         for pattern in skip_fusion_patterns:
             default_fusion_patterns.pop(pattern)
