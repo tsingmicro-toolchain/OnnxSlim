@@ -2,9 +2,15 @@
 
 
 # Installation
-```
+## Using Prebuilt
+```bash
 pip install onnxslim
 ```
+## Build From Source
+```
+pip install .
+```
+
 
 # How to use
 ```
