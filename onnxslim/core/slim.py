@@ -333,9 +333,11 @@ class OnnxSlim:
                         return
 
         if model_path:
-            try:
+            if (
+                self.model.ByteSize() <= checker.MAXIMUM_PROTOBUF
+            ):  # model larger than 2GB can be saved, but compiler like trtexec won't parse it
                 onnx.save(self.model, model_path)
-            except ValueError:
+            else:
                 import os
 
                 onnx.save(
