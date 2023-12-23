@@ -40,6 +40,7 @@ class OnnxSlim:
             self.model = model
 
         self.freeze()
+        self.raw_size = 0
         self.float_info = self.summarize(self.model)
 
     def init_logging(self, log_level: int):
@@ -263,6 +264,8 @@ class OnnxSlim:
 
         model_size = model.ByteSize()
         model_info["model_size"] = model_size
+        if self.raw_size:
+            model_info["model_size"] = [model_size, self.raw_size]
 
         op_type_counts = {}
 
@@ -339,7 +342,7 @@ class OnnxSlim:
                 onnx.save(self.model, model_path)
             else:
                 import os
-
+                self.raw_size = self.model.ByteSize()
                 onnx.save(
                     self.model,
                     model_path,

@@ -1,20 +1,29 @@
-from typing import Dict
+from typing import Dict, Tuple, Union
 
 import numpy as np
 import onnx
 
 
-def format_bytes(size_in_bytes: int) -> str:
+def format_bytes(size: Union[int, Tuple[int, ...]]) -> str:
+    if isinstance(size, int):
+        size = (size,)
+
     units = ["B", "KB", "MB", "GB"]
+    formatted_sizes = []
 
-    unit_index = 0
-    while size_in_bytes >= 1024 and unit_index < len(units) - 1:
-        size_in_bytes /= 1024
-        unit_index += 1
+    for size_in_bytes in size:
+        unit_index = 0
+        while size_in_bytes >= 1024 and unit_index < len(units) - 1:
+            size_in_bytes /= 1024
+            unit_index += 1
 
-    formatted_size = "{:.2f} {}".format(size_in_bytes, units[unit_index])
-    return formatted_size
+        formatted_size = "{:.2f} {}".format(size_in_bytes, units[unit_index])
+        formatted_sizes.append(formatted_size)
 
+    if len(formatted_sizes) == 1:
+        return formatted_sizes[0]
+    else:
+        return f"{formatted_sizes[0]} ({formatted_sizes[1]})"
 
 def onnx_dtype_to_numpy(onnx_dtype: int) -> np.dtype:
     import onnx.mapping as mapping
