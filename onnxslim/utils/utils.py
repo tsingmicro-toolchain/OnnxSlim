@@ -25,6 +25,7 @@ def format_bytes(size: Union[int, Tuple[int, ...]]) -> str:
     else:
         return f"{formatted_sizes[0]} ({formatted_sizes[1]})"
 
+
 def onnx_dtype_to_numpy(onnx_dtype: int) -> np.dtype:
     import onnx.mapping as mapping
 

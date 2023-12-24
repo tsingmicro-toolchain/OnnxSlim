@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+import tempfile
 from pathlib import Path
 from typing import Dict, List, Union
 
@@ -173,7 +174,15 @@ class OnnxSlim:
                 )
             )
         except:
-            self.model = onnx.shape_inference.infer_shapes(self.model)
+            if self.model.ByteSize() >= checker.MAXIMUM_PROTOBUF:
+                tmp_dir = tempfile.TemporaryDirectory()
+                tmp_path = os.path.join(tmp_dir.name, "tmp.onnx")
+                tmp_infer_path = os.path.join(tmp_dir.name, "tmp_infer.onnx")
+                self.save(tmp_path)
+                onnx.shape_inference.infer_shapes_path(tmp_path, tmp_infer_path)
+                self.model = onnx.load(tmp_infer_path)
+            else:
+                self.model = onnx.shape_inference.infer_shapes(self.model)
         if DEBUG:
             onnx.save(self.model, "debug_shape_infer.onnx")
 
@@ -339,18 +348,23 @@ class OnnxSlim:
             if (
                 self.model.ByteSize() <= checker.MAXIMUM_PROTOBUF
             ):  # model larger than 2GB can be saved, but compiler like trtexec won't parse it
+                self.raw_size = 0
                 onnx.save(self.model, model_path)
             else:
                 import os
+
                 self.raw_size = self.model.ByteSize()
+                location = os.path.basename(model_path) + ".data"
+                if os.path.exists(location):
+                    os.remove(location)
                 onnx.save(
                     self.model,
                     model_path,
                     save_as_external_data=True,
                     all_tensors_to_one_file=True,
-                    location=os.path.basename(model_path) + ".data",
+                    location=location,
                 )
-                logger.warning(
+                logger.debug(
                     "Model too large and saved as external data automatically."
                 )
 
