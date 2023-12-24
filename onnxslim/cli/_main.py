@@ -38,9 +38,6 @@ def slim(
     if optimization == None:
         slimmer.shape_infer()
     elif shape_infer == "enable":
-        data_prop = False
-        if data_prop == "enable":
-            data_prop = True
         slimmer.shape_infer()
 
     if optimization == None or constant_folding == "enable":
