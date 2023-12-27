@@ -110,14 +110,14 @@ def main():
         "--constant_folding",
         choices=["enable", "disable"],
         default="enable",
-        help="whether to enable shape_infer, default enable.",
+        help="whether to enable constant_folding, default enable.",
     )
 
     # Data Format Conversion
     optimization_parser.add_argument(
         "--dtype",
         choices=["fp16", "fp32"],
-        help="whether to enable shape_infer, default enable.",
+        help="convert data format to fp16 or fp32.",
     )
 
     optimization_parser.add_argument(
