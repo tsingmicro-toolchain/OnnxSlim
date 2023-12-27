@@ -44,6 +44,25 @@ def get_node_users(node):
     return users
 
 
+def get_node_feeds(node):
+    feeds = []
+    for input in node.inputs:  # input is a Variable
+        for feed in input.inputs:  # feed is a Node
+            feeds.append(feed)
+    return feeds
+
+
+def get_previous_node_by_type(node, op_type, trajectory=[]):
+    node_feeds = get_node_feeds(node)
+    for node_feed in node_feeds:
+        if node_feed.op == op_type:
+            trajectory.append(node_feed)
+            return trajectory
+        else:
+            trajectory.append(node_feed)
+            return get_previous_node_by_type(node_feed, op_type, trajectory)
+
+
 def get_constant_variable(node):
     for input in list(node.inputs):
         if isinstance(input, Constant):
@@ -372,6 +391,48 @@ def find_slice_nodes(node, opset):
                         }
                     }
                 )
+
+    return match
+
+
+# @register_fusion_pattern("EliminationTranspose")
+def find_slice_nodes(node, opset):
+    # fmt: off
+    '''
+             x
+             |
+          Transpose
+             |
+          Transpose
+    '''
+    # fmt: on
+    match = {}
+    if node.op == "Transpose":
+        previous_nodes = get_previous_node_by_type(node, "Transpose")
+        if previous_nodes:
+            if len(previous_nodes) == 1:
+                delete_node(node)
+                delete_node(previous_nodes[-1])
+            else:
+                delete_node(node)
+                previous_transpose_node = previous_nodes[-1]
+                last_node = previous_nodes[-2]
+                slice_axis = gs.Constant(
+                    last_node.name + "_slice_axis",
+                    values=np.array([2]).astype(np.int64),
+                )
+                last_node.inputs.pop(3)
+                last_node.inputs.insert(3, slice_axis)
+                previous_transpose_node_variable = previous_transpose_node.outputs[
+                    0
+                ]  # pad output variable
+                previous_transpose_node_variable.outputs.remove(last_node)
+                last_node.inputs.insert(0, previous_transpose_node.inputs[0])
+                for node in previous_nodes:
+                    for output in node.outputs:
+                        if isinstance(output, Constant):
+                            continue
+                        output.shape = None
 
     return match
 
