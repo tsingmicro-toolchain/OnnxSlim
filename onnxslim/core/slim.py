@@ -26,7 +26,7 @@ from ..utils.utils import (
     onnxruntime_inference,
 )
 
-from .optimizer import optimize_model
+from .optimizer import delete_node, optimize_model
 
 DEBUG = bool(os.getenv("ONNXSLIM_DEBUG"))
 
@@ -201,13 +201,21 @@ class OnnxSlim:
             self.model = float16.convert_float_to_float16(self.model)
         elif dtype == "fp32":
             graph = gs.import_onnx(self.model).toposort()
+
+            for node in graph.nodes:
+                if node.op == "Cast":
+                    inp_dtype = [input.dtype for input in node.inputs][0]
+                    if inp_dtype == np.float16 or inp_dtype == np.float32:
+                        delete_node(node)
+
             for tensor in graph.tensors().values():
                 if isinstance(tensor, gs.Variable) and tensor.dtype == np.float16:
                     tensor.dtype = np.float32
                 elif isinstance(tensor, gs.Constant) and tensor.dtype == np.float16:
                     tensor.values = tensor.values.astype(np.float32)
 
-        self.model = gs.export_onnx(graph)
+            graph.cleanup(remove_unused_graph_inputs=True).toposort()
+            self.model = gs.export_onnx(graph)
 
     def summary(self):
         self.slimmed_info = self.summarize(self.model)
