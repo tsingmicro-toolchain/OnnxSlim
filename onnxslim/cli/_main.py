@@ -26,7 +26,7 @@ def slim(
     )
 
     slimmer = OnnxSlim(model)
-    if output_model == None:
+    if output_model == None and isinstance(model, str):
         slimmer.summary()
 
     if optimization and input_shapes:
