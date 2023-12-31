@@ -26,6 +26,9 @@ def slim(
     )
 
     slimmer = OnnxSlim(model)
+    if output_model == None:
+        slimmer.summary()
+
     if optimization and input_shapes:
         slimmer.input_shape_modification(input_shapes)
 
@@ -71,7 +74,10 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("input_model", help="input onnx model")
-    parser.add_argument("output_model", help="output onnx model")
+    parser.add_argument(
+        "output_model", nargs="?", default=None, help="output onnx model"
+    )
+
     parser.add_argument("--model_check", action="store_true", help="enable model check")
     parser.add_argument(
         "-v", "--version", action="version", version=onnxslim.__version__
