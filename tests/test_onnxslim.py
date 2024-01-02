@@ -37,7 +37,6 @@ class TestOnnxModel:
         filename = download_onnx_from_url(
             f"http://120.224.26.32:15030/aifarm/onnx/{name}.onnx"
         )
-
         model_slim = slim(filename)
         onnx.save(model_slim, f"{name}_slim.onnx")
 
@@ -47,7 +46,9 @@ class TestFeat:
         filename = download_onnx_from_url(
             f"http://120.224.26.32:15030/aifarm/onnx/UNetModel-fp16.onnx"
         )
-        command = f"onnxslim {filename} UNetModel-fp16_slim.onnx optimization --input_shapes cc:1,1,768"
+        command = (
+            f"onnxslim {filename} UNetModel-fp16_slim.onnx --input_shapes cc:1,1,768"
+        )
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
         output = result.stderr.strip()
         # Assert the expected return code
@@ -58,7 +59,7 @@ class TestFeat:
         filename = download_onnx_from_url(
             f"http://120.224.26.32:15030/aifarm/onnx/UNetModel-fp16.onnx"
         )
-        command = f"onnxslim {filename} UNetModel-fp16_slim.onnx optimization --input_shapes cc:1,1,768 --dtype fp32"
+        command = f"onnxslim {filename} UNetModel-fp16_slim.onnx --input_shapes cc:1,1,768 --dtype fp32"
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
         output = result.stderr.strip()
         # Assert the expected return code

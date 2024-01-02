@@ -5,15 +5,15 @@ import onnx
 
 def slim(
     model: Union[str, onnx.ModelProto],
-    model_check: bool = None,
+    model_check: bool = False,
     output_model: str = None,
-    optimization: bool = None,
     input_shapes: str = None,
     outputs: str = None,
     shape_infer: str = None,
     constant_folding: str = None,
     dtype: str = None,
     skip_fusion_patterns: str = None,
+    inspect: bool = False,
 ):
     import os
 
@@ -26,24 +26,22 @@ def slim(
     )
 
     slimmer = OnnxSlim(model)
-    if output_model == None and isinstance(model, str):
-        slimmer.summary()
+    if inspect:
+        slimmer.summary(float_only=True)
+        return None
 
-    if optimization and input_shapes:
+    if input_shapes:
         slimmer.input_shape_modification(input_shapes)
 
-    if optimization and outputs:
+    if outputs:
         slimmer.output_modification(outputs)
 
     if model_check:
         slimmer.check_point()
 
-    if optimization == None:
-        slimmer.shape_infer()
-    elif shape_infer == "enable":
-        slimmer.shape_infer()
+    slimmer.shape_infer()
 
-    if optimization == None or constant_folding == "enable":
+    if constant_folding == "enable":
         while MAX_ITER > 0:
             slimmer.slim(skip_fusion_patterns)
             slimmer.shape_infer()
@@ -51,7 +49,7 @@ def slim(
                 break
             MAX_ITER -= 1
 
-    if optimization and dtype:
+    if dtype:
         slimmer.convert_data_format(dtype)
 
     slimmer.save(output_model, model_check)
@@ -82,20 +80,16 @@ def main():
     parser.add_argument(
         "-v", "--version", action="version", version=onnxslim.__version__
     )
-    subparsers = parser.add_subparsers(title="Optimization", dest="optimization")
 
-    optimization_parser = subparsers.add_parser(
-        "optimization", help="perform optimization"
-    )
     # Input Shape Modification
-    optimization_parser.add_argument(
+    parser.add_argument(
         "--input_shapes",
         nargs="+",
         type=str,
         help="input shape of the model, INPUT_NAME:SHAPE, e.g. x:1,3,224,224 or x1:1,3,224,224 x2:1,3,224,224",
     )
     # Output Modification
-    optimization_parser.add_argument(
+    parser.add_argument(
         "--outputs",
         nargs="+",
         type=str,
@@ -104,7 +98,7 @@ def main():
                                                                              if it has dtype, otherwise it will be fp32, available dtype: fp16, fp32, int32",
     )
     # Shape Inference
-    optimization_parser.add_argument(
+    parser.add_argument(
         "--shape_infer",
         choices=["enable", "disable"],
         default="enable",
@@ -112,7 +106,7 @@ def main():
     )
 
     # Constant Folding
-    optimization_parser.add_argument(
+    parser.add_argument(
         "--constant_folding",
         choices=["enable", "disable"],
         default="enable",
@@ -120,17 +114,24 @@ def main():
     )
 
     # Data Format Conversion
-    optimization_parser.add_argument(
+    parser.add_argument(
         "--dtype",
         choices=["fp16", "fp32"],
         help="convert data format to fp16 or fp32.",
     )
 
-    optimization_parser.add_argument(
+    parser.add_argument(
         "--skip_fusion_patterns",
         nargs="+",
         choices=list(onnxslim.DEFAULT_FUSION_PATTERNS.keys()),
         help="whether to skip the fusion of some patterns",
+    )
+
+    # Inspect Model
+    parser.add_argument(
+        "--inspect",
+        action="store_true",
+        help="inspect model, default False.",
     )
 
     args, unknown = parser.parse_known_args()
@@ -139,24 +140,20 @@ def main():
         logger.error(f"unrecognized options: {unknown}")
         return 1
 
-    inputs_shapes = None if not args.optimization else args.input_shapes
-    outputs = None if not args.optimization else args.outputs
-    shape_infer = None if not args.optimization else args.shape_infer
-    constant_folding = None if not args.optimization else args.constant_folding
-    dtype = None if not args.optimization else args.dtype
-    skip_fusion_patterns = None if not args.optimization else args.skip_fusion_patterns
+    if not args.inspect and not args.output_model:
+        parser.error("output_model is required when --inspect is not set")
 
     slim(
         args.input_model,
         args.model_check,
         args.output_model,
-        args.optimization,
-        inputs_shapes,
-        outputs,
-        shape_infer,
-        constant_folding,
-        dtype,
-        skip_fusion_patterns,
+        args.input_shapes,
+        args.outputs,
+        args.shape_infer,
+        args.constant_folding,
+        args.dtype,
+        args.skip_fusion_patterns,
+        args.inspect,
     )
 
     return 0

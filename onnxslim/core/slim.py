@@ -17,13 +17,12 @@ logging.basicConfig(level=logging.ERROR)
 
 from loguru import logger
 
-from ..utils.font import GREEN, WHITE
-
-from ..utils.tabulate import SEPARATING_LINE, tabulate
 from ..utils.utils import (
     format_bytes,
     gen_onnxruntime_input_data,
+    get_opset,
     onnxruntime_inference,
+    print_model_info_as_table,
 )
 
 from .optimizer import delete_node, optimize_model
@@ -42,7 +41,7 @@ class OnnxSlim:
 
         self.freeze()
         self.raw_size = 0
-        self.float_info = self.summarize(self.model)
+        self.float_info = self.summarize_model(self.model)
 
     def init_logging(self, log_level: int):
         logger.remove()
@@ -61,16 +60,6 @@ class OnnxSlim:
         import onnxruntime as ort
 
         ort.set_default_logger_severity(3)
-
-    def get_opset(self, model: onnx.ModelProto) -> int:
-        try:
-            for importer in model.opset_import:
-                if importer.domain == "" or importer.domain == "ai.onnx":
-                    return importer.version
-
-            return None
-        except:
-            return None
 
     def clear_value_info(self) -> onnx.ModelProto:
         graph = gs.import_onnx(self.model)
@@ -217,66 +206,20 @@ class OnnxSlim:
             graph.cleanup(remove_unused_graph_inputs=True).toposort()
             self.model = gs.export_onnx(graph)
 
-    def summary(self):
-        self.slimmed_info = self.summarize(self.model)
-        final_op_info = []
-        final_op_info.append(
-            [
-                "Model Name",
+    def summary(self, float_only: bool = False):
+        if float_only:
+            print_model_info_as_table(
+                self.model_name, str(get_opset(self.model)), [self.float_info]
+            )
+        else:
+            self.slimmed_info = self.summarize_model(self.model)
+            print_model_info_as_table(
                 self.model_name,
-                "Op Set: " + str(self.get_opset(self.model)),
-            ]
-        )
-        final_op_info.append([SEPARATING_LINE])
+                str(get_opset(self.model)),
+                [self.float_info, self.slimmed_info],
+            )
 
-        final_op_info.append(["Model Info", "Original Model", "Slimmed Model"])
-        final_op_info.append([SEPARATING_LINE, SEPARATING_LINE, SEPARATING_LINE])
-
-        all_inputs = list(self.float_info["op_input_info"].keys())
-
-        for inputs in all_inputs:
-            float_shape = self.float_info["op_input_info"].get(inputs, "")
-            slimmed_shape = self.slimmed_info["op_input_info"].get(inputs, "")
-            final_op_info.append(["IN: " + inputs, float_shape, slimmed_shape])
-
-        all_outputs = list(self.float_info["op_output_info"].keys())
-
-        for outputs in all_outputs:
-            float_shape = self.float_info["op_output_info"].get(outputs, "")
-            slimmed_shape = self.slimmed_info["op_output_info"].get(outputs, "")
-            final_op_info.append(["OUT: " + outputs, float_shape, slimmed_shape])
-
-        final_op_info.append([SEPARATING_LINE, SEPARATING_LINE, SEPARATING_LINE])
-        final_op_info.append(["OP TYPE", "Original Model", "Slimmed Model"])
-        final_op_info.append([SEPARATING_LINE])
-        all_ops = set(
-            list(self.float_info["op_type_counts"].keys())
-            + list(self.slimmed_info["op_type_counts"].keys())
-        )
-        sorted_ops = list(all_ops)
-        sorted_ops.sort()
-        for op in sorted_ops:
-            float_number = self.float_info["op_type_counts"].get(op, 0)
-            slimmed_number = self.slimmed_info["op_type_counts"].get(op, 0)
-            if float_number > slimmed_number:
-                slimmed_number = GREEN + str(slimmed_number) + WHITE
-            final_op_info.append([op, float_number, slimmed_number])
-        final_op_info.append([SEPARATING_LINE, SEPARATING_LINE, SEPARATING_LINE])
-        final_op_info.append(
-            [
-                "Model Size",
-                format_bytes(self.float_info["model_size"]),
-                format_bytes(self.slimmed_info["model_size"]),
-            ]
-        )
-        lines = tabulate(
-            final_op_info, headers=[], tablefmt="pretty", maxcolwidths=[None, 32, 32]
-        ).split("\n")
-        output = "\n".join([line if line != "| \x01 |" else lines[0] for line in lines])
-
-        print(output)
-
-    def summarize(self, model: onnx.ModelProto) -> Dict:
+    def summarize_model(self, model: onnx.ModelProto) -> Dict:
         model_info = {}
 
         model_size = model.ByteSize()
@@ -378,7 +321,7 @@ class OnnxSlim:
 
     def is_converged(self, iter: int) -> bool:
         logger.debug(f"optimization iter: {iter}")
-        slimmed_info = self.summarize(self.model)
+        slimmed_info = self.summarize_model(self.model)
         if "Shape" not in slimmed_info["op_type_counts"].keys():
             logger.debug(f"converged at iter: {iter}")
             return True
