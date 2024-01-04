@@ -241,6 +241,9 @@ class OnnxSlim:
         def get_shape(inputs: onnx.ModelProto) -> Dict[str, List[int]]:
             op_shape_info = {}
             for input in inputs:
+                type_str = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE.get(
+                    input.type.tensor_type.elem_type, "Unknown"
+                )
                 if input.type.tensor_type.HasField("shape"):
                     shape = []
                     for dim in input.type.tensor_type.shape.dim:
@@ -250,7 +253,7 @@ class OnnxSlim:
                             shape.append(dim.dim_value)
                         else:
                             shape.append(None)
-                    op_shape_info[input.name] = tuple(shape)
+                    op_shape_info[input.name] = str(type_str) + ": " + str(tuple(shape))
 
             return op_shape_info
 

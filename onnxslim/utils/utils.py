@@ -118,8 +118,12 @@ def print_model_info_as_table(model_name, opset, model_info_list: List[Dict]):
             input_info_list.append(inputs_shape)
         final_op_info.append(input_info_list)
 
-    all_outputs = list(model_info_list[0]["op_output_info"].keys())
-
+    all_outputs = set(
+        op_type
+        for model_info in model_info_list
+        for op_type in model_info.get("op_output_info", {})
+    )
+    print(all_outputs)
     for outputs in all_outputs:
         output_info_list = [
             "OUT: " + outputs,
