@@ -123,7 +123,7 @@ def print_model_info_as_table(model_name, opset, model_info_list: List[Dict]):
         for model_info in model_info_list
         for op_type in model_info.get("op_output_info", {})
     )
-    print(all_outputs)
+
     for outputs in all_outputs:
         output_info_list = [
             "OUT: " + outputs,
