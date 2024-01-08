@@ -19,7 +19,7 @@ onnxslim your_onnx_model slimmed_onnx_model
 
 <div align=left><img src="images/onnxslim.gif"></div>
 
-For more usage, see onnxslim -h or refer to our examples
+For more usage, see onnxslim -h or refer to our [examples](./examples)
 
 # References
 > * [onnx-graphsurgeon](https://github.com/NVIDIA/TensorRT/tree/main/tools/onnx-graphsurgeon)
