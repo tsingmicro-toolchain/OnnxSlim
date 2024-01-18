@@ -166,7 +166,7 @@ def print_model_info_as_table(model_name, opset, model_info_list: List[Dict]):
         final_op_info,
         headers=[],
         tablefmt="pretty",
-        maxcolwidths=[None, 32, 32, 32, 32],
+        maxcolwidths=[None] + [40] * len(model_info_list),
     ).split("\n")
 
     output = "\n".join([line if line != "| \x01 |" else lines[0] for line in lines])
