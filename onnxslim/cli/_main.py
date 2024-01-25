@@ -5,12 +5,12 @@ import onnx
 
 def slim(
     model: Union[str, onnx.ModelProto],
-    model_check: bool = False,
     output_model: str = None,
+    model_check: bool = False,
     input_shapes: str = None,
     outputs: str = None,
-    shape_infer: str = None,
-    constant_folding: str = None,
+    no_shape_infer: bool = False,
+    no_constant_folding: bool = False,
     dtype: str = None,
     skip_fusion_patterns: str = None,
     inspect: bool = False,
@@ -41,7 +41,7 @@ def slim(
 
     slimmer.shape_infer()
 
-    if constant_folding == "enable":
+    if not no_constant_folding:
         while MAX_ITER > 0:
             slimmer.slim(skip_fusion_patterns)
             slimmer.shape_infer()
@@ -99,18 +99,16 @@ def main():
     )
     # Shape Inference
     parser.add_argument(
-        "--shape_infer",
-        choices=["enable", "disable"],
-        default="enable",
-        help="whether to enable shape_infer, default enable.",
+        "--no_shape_infer",
+        action="store_true",
+        help="whether to disable shape_infer, default false.",
     )
 
     # Constant Folding
     parser.add_argument(
-        "--constant_folding",
-        choices=["enable", "disable"],
-        default="enable",
-        help="whether to enable constant_folding, default enable.",
+        "--no_constant_folding",
+        action="store_true",
+        help="whether to disable constant_folding, default false.",
     )
 
     # Data Format Conversion
@@ -145,12 +143,12 @@ def main():
 
     slim(
         args.input_model,
-        args.model_check,
         args.output_model,
+        args.model_check,
         args.input_shapes,
         args.outputs,
-        args.shape_infer,
-        args.constant_folding,
+        args.no_shape_infer,
+        args.no_constant_folding,
         args.dtype,
         args.skip_fusion_patterns,
         args.inspect,
