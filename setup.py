@@ -9,7 +9,7 @@ with open("onnxslim/version.py", "w") as f:
 setup(
     name="onnxslim",
     version=version,
-    description="OnnxSlim: A Toolkit to Help Optimizer Onnx Model",
+    description="OnnxSlim: A Toolkit to Help Optimize Large Onnx Model",
     long_description=open("README.md", "r", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/inisis/OnnxSlim",
