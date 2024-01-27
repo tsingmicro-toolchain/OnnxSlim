@@ -3,7 +3,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Dict, Union
 
 import numpy as np
 import onnx
@@ -227,38 +227,25 @@ class OnnxSlim:
         if self.raw_size:
             model_info["model_size"] = [model_size, self.raw_size]
 
+        graph = gs.import_onnx(model)
         op_type_counts = {}
 
-        for node in model.graph.node:
-            op_type = node.op_type
+        for node in graph.nodes:
+            op_type = node.op
             if op_type in op_type_counts:
                 op_type_counts[op_type] += 1
             else:
                 op_type_counts[op_type] = 1
 
         model_info["op_type_counts"] = op_type_counts
-
-        def get_shape(inputs: onnx.ModelProto) -> Dict[str, List[int]]:
-            op_shape_info = {}
-            for input in inputs:
-                type_str = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE.get(
-                    input.type.tensor_type.elem_type, "Unknown"
-                )
-                if input.type.tensor_type.HasField("shape"):
-                    shape = []
-                    for dim in input.type.tensor_type.shape.dim:
-                        if dim.HasField("dim_param"):
-                            shape.append(dim.dim_param)
-                        elif dim.HasField("dim_value"):
-                            shape.append(dim.dim_value)
-                        else:
-                            shape.append(None)
-                    op_shape_info[input.name] = str(type_str) + ": " + str(tuple(shape))
-
-            return op_shape_info
-
-        model_info["op_input_info"] = get_shape(model.graph.input)
-        model_info["op_output_info"] = get_shape(model.graph.output)
+        model_info["op_input_info"] = {
+            input.name: str(input.dtype) + ": " + str(input.shape)
+            for input in graph.inputs
+        }
+        model_info["op_output_info"] = {
+            output.name: str(output.dtype) + ": " + str(output.shape)
+            for output in graph.outputs
+        }
 
         return model_info
 
