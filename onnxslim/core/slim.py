@@ -20,7 +20,6 @@ from loguru import logger
 from ..utils.utils import (
     format_bytes,
     gen_onnxruntime_input_data,
-    get_opset,
     onnxruntime_inference,
     print_model_info_as_table,
 )
@@ -208,14 +207,11 @@ class OnnxSlim:
 
     def summary(self, float_only: bool = False):
         if float_only:
-            print_model_info_as_table(
-                self.model_name, str(get_opset(self.model)), [self.float_info]
-            )
+            print_model_info_as_table(self.model_name, [self.float_info])
         else:
             self.slimmed_info = self.summarize_model(self.model)
             print_model_info_as_table(
                 self.model_name,
-                str(get_opset(self.model)),
                 [self.float_info, self.slimmed_info],
             )
 
@@ -237,6 +233,7 @@ class OnnxSlim:
             else:
                 op_type_counts[op_type] = 1
 
+        model_info["op_set"] = str(graph.opset)
         model_info["op_type_counts"] = op_type_counts
         model_info["op_input_info"] = {
             input.name: str(input.dtype) + ": " + str(input.shape)

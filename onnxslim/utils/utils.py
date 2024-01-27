@@ -84,7 +84,7 @@ def onnxruntime_inference(
     return onnx_output
 
 
-def print_model_info_as_table(model_name, opset, model_info_list: List[Dict]):
+def print_model_info_as_table(model_name, model_info_list: List[Dict]):
     assert (
         len(model_info_list) > 0
     ), "model_info_list must contain more than one model info"
@@ -93,10 +93,10 @@ def print_model_info_as_table(model_name, opset, model_info_list: List[Dict]):
     if len(model_info_list) == 1:
         final_op_info.append(["Model Name", model_name])
         final_op_info.append([SEPARATING_LINE])
-        final_op_info.append(["Op Set ", opset])
+        final_op_info.append(["Op Set ", model_info_list[0]["op_set"]])
     else:
         final_op_info.append(
-            ["Model Name", model_name, "Op Set: " + opset]
+            ["Model Name", model_name, "Op Set: " + model_info_list[0]["op_set"]]
             + [""] * (len(model_info_list) - 2)
         )
     final_op_info.append([SEPARATING_LINE])
@@ -172,14 +172,3 @@ def print_model_info_as_table(model_name, opset, model_info_list: List[Dict]):
     output = "\n".join([line if line != "| \x01 |" else lines[0] for line in lines])
 
     print(output)
-
-
-def get_opset(model: onnx.ModelProto) -> int:
-    try:
-        for importer in model.opset_import:
-            if importer.domain == "" or importer.domain == "ai.onnx":
-                return importer.version
-
-        return None
-    except:
-        return None
