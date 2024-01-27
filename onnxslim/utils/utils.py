@@ -84,7 +84,7 @@ def onnxruntime_inference(
     return onnx_output
 
 
-def print_model_info_as_table(model_name, model_info_list: List[Dict]):
+def print_model_info_as_table(model_name: str, model_info_list: List[Dict]):
     assert (
         len(model_info_list) > 0
     ), "model_info_list must contain more than one model info"
@@ -172,3 +172,41 @@ def print_model_info_as_table(model_name, model_info_list: List[Dict]):
     output = "\n".join([line if line != "| \x01 |" else lines[0] for line in lines])
 
     print(output)
+
+
+def dump_model_info_to_disk(model_name: str, model_info: Dict):
+    import csv
+    import os
+
+    filename_without_extension, _ = os.path.splitext(os.path.basename(model_name))
+    csv_file_path = f"{filename_without_extension}_model_info.csv"
+    with open(csv_file_path, "a", newline="") as csvfile:  # Use 'a' for append mode
+        fieldnames = ["NodeName", "OpType", "OutputDtype", "OutputShape"]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+        # If the file is empty, write the header
+        if csvfile.tell() == 0:
+            writer.writeheader()
+
+        # Write the data
+        for node_name, info in model_info["op_info"].items():
+            op_type, output_info_list = info
+            # Write the first row with actual NodeName and OpType
+            row_data_first = {
+                "NodeName": node_name,
+                "OpType": op_type,
+                "OutputDtype": output_info_list[0][0],  # First entry in the list
+                "OutputShape": output_info_list[0][1],  # First entry in the list
+            }
+            writer.writerow(row_data_first)
+
+            # Write subsequent rows with empty strings for NodeName and OpType
+            for output_dtype, output_shape in output_info_list[1:]:
+                row_data_empty = {
+                    "NodeName": "",
+                    "OpType": "",
+                    "OutputDtype": output_dtype,
+                    "OutputShape": output_shape,
+                }
+                writer.writerow(row_data_empty)
+    print(f"Model info written to {csv_file_path}")

@@ -14,6 +14,7 @@ def slim(
     dtype: str = None,
     skip_fusion_patterns: str = None,
     inspect: bool = False,
+    dump_to_disk: bool = False,
 ):
     import os
 
@@ -27,7 +28,7 @@ def slim(
 
     slimmer = OnnxSlim(model)
     if inspect:
-        slimmer.summary(float_only=True)
+        slimmer.summary(inspect, dump_to_disk)
         return None
 
     if input_shapes:
@@ -132,14 +133,24 @@ def main():
         help="inspect model, default False.",
     )
 
+    # Dump Model Info to Disk
+    parser.add_argument(
+        "--dump_to_disk",
+        action="store_true",
+        help="dump model info to disk, default False.",
+    )
+
     args, unknown = parser.parse_known_args()
 
     if unknown:
         logger.error(f"unrecognized options: {unknown}")
         return 1
 
-    if not args.inspect and not args.output_model:
-        parser.error("output_model is required when --inspect is not set")
+    if args.inspect and args.output_model:
+        parser.error("--inspect and output_model are mutually exclusive")
+
+    if not args.inspect and args.dump_to_disk:
+        parser.error("dump_to_disk can only be used with --inspect")
 
     slim(
         args.input_model,
@@ -152,6 +163,7 @@ def main():
         args.dtype,
         args.skip_fusion_patterns,
         args.inspect,
+        args.dump_to_disk,
     )
 
     return 0

@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.ERROR)
 from loguru import logger
 
 from ..utils.utils import (
-    format_bytes,
+    dump_model_info_to_disk,
     gen_onnxruntime_input_data,
     onnxruntime_inference,
     print_model_info_as_table,
@@ -37,6 +37,7 @@ class OnnxSlim:
             self.model_name = Path(model).name
         else:
             self.model = model
+            self.model_name = "ONNX_Model"
 
         self.freeze()
         self.raw_size = 0
@@ -205,9 +206,12 @@ class OnnxSlim:
             graph.cleanup(remove_unused_graph_inputs=True).toposort()
             self.model = gs.export_onnx(graph)
 
-    def summary(self, float_only: bool = False):
-        if float_only:
+    def summary(self, inspect: bool = False, dump_to_disk: bool = False):
+        if inspect:
             print_model_info_as_table(self.model_name, [self.float_info])
+            if dump_to_disk:
+                dump_model_info_to_disk(self.model_name, self.float_info)
+
         else:
             self.slimmed_info = self.summarize_model(self.model)
             print_model_info_as_table(
@@ -224,6 +228,7 @@ class OnnxSlim:
             model_info["model_size"] = [model_size, self.raw_size]
 
         graph = gs.import_onnx(model)
+        op_info = {}
         op_type_counts = {}
 
         for node in graph.nodes:
@@ -233,7 +238,13 @@ class OnnxSlim:
             else:
                 op_type_counts[op_type] = 1
 
+            op_info[node.name] = [
+                node.op,
+                [[output.dtype, output.shape] for output in node.outputs],
+            ]
+
         model_info["op_set"] = str(graph.opset)
+        model_info["op_info"] = op_info
         model_info["op_type_counts"] = op_type_counts
         model_info["op_input_info"] = {
             input.name: str(input.dtype) + ": " + str(input.shape)
