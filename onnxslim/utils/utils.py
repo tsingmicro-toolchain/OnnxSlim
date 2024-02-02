@@ -134,10 +134,6 @@ def print_model_info_as_table(model_name: str, model_info_list: List[Dict]):
         final_op_info.append(output_info_list)
 
     final_op_info.append([SEPARATING_LINE] * (len(model_info_list) + 1))
-    final_op_info.append(
-        ["Op Type", "Original Model"] + ["Slimmed Model"] * (len(model_info_list) - 1)
-    )
-    final_op_info.append([SEPARATING_LINE] * (len(model_info_list) + 1))
 
     all_ops = set(
         op_type
