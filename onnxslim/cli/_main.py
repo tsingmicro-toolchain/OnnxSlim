@@ -40,7 +40,8 @@ def slim(
     if model_check:
         slimmer.check_point()
 
-    slimmer.shape_infer()
+    if not no_shape_infer:
+        slimmer.shape_infer()
 
     if not no_constant_folding:
         while MAX_ITER > 0:

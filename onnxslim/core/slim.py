@@ -124,6 +124,8 @@ class OnnxSlim:
                     dtype = np.float32
                 elif dtype == "int32":
                     dtype = np.int32
+                elif dtype == "bool":
+                    dtype = bool
                 else:
                     raise Exception(
                         f"Output layer {key} assigned unsupported dtype {dtype}"
