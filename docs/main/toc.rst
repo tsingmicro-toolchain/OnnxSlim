@@ -1,0 +1,4 @@
+main
+============
+
+.. autoclass:: onnxslim.slim
