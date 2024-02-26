@@ -32,4 +32,5 @@ For more usage, see onnxslim -h or refer to our [examples](./examples)
 > * [tabulate](https://github.com/astanin/python-tabulate)
 
 # Contact
+Discord: https://discord.gg/nRw2Fd3VUS  
 QQ Group: 873569894
