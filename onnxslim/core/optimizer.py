@@ -178,54 +178,58 @@ def find_conv_transpose_nodes(node, opset):
     if node.op == "BatchNormalization":
         if node.i(0).op == "ConvTranspose" or node.i(0).op == "Conv":
             conv_transpose_node = node.i(0)
-            conv_transpose_weight = conv_transpose_node.inputs[1].values
-            bn_node = node
-            bn_scale = bn_node.inputs[1].values
-            bn_bias = bn_node.inputs[2].values
-            bn_running_mean = bn_node.inputs[3].values
-            bn_running_var = bn_node.inputs[4].values
-            bn_eps = bn_node.attrs["epsilon"]
+            conv_transpose_node_users = get_node_users(conv_transpose_node)
+            if len(conv_transpose_node_users) == 1:
+                conv_transpose_weight = conv_transpose_node.inputs[1].values
+                bn_node = node
+                bn_scale = bn_node.inputs[1].values
+                bn_bias = bn_node.inputs[2].values
+                bn_running_mean = bn_node.inputs[3].values
+                bn_running_var = bn_node.inputs[4].values
+                bn_eps = bn_node.attrs["epsilon"]
 
-            if len(conv_transpose_node.inputs) == 2:
-                conv_transpose_bias = np.zeros_like(bn_running_mean)
-            else:
-                conv_transpose_bias = conv_transpose_node.inputs[2].values
+                if len(conv_transpose_node.inputs) == 2:
+                    conv_transpose_bias = np.zeros_like(bn_running_mean)
+                else:
+                    conv_transpose_bias = conv_transpose_node.inputs[2].values
 
-            bn_var_rsqrt = 1.0 / np.sqrt(bn_running_var + bn_eps)
-            shape = [1] * len(conv_transpose_weight.shape)
-            if node.i(0).op == "Conv":
-                shape[0] = -1
-            else:
-                shape[1] = -1
-            conv_w = conv_transpose_weight * (bn_scale * bn_var_rsqrt).reshape(shape)
-            conv_b = (
-                conv_transpose_bias - bn_running_mean
-            ) * bn_var_rsqrt * bn_scale + bn_bias
+                bn_var_rsqrt = 1.0 / np.sqrt(bn_running_var + bn_eps)
+                shape = [1] * len(conv_transpose_weight.shape)
+                if node.i(0).op == "Conv":
+                    shape[0] = -1
+                else:
+                    shape[1] = -1
+                conv_w = conv_transpose_weight * (bn_scale * bn_var_rsqrt).reshape(
+                    shape
+                )
+                conv_b = (
+                    conv_transpose_bias - bn_running_mean
+                ) * bn_var_rsqrt * bn_scale + bn_bias
 
-            inputs = []
-            inputs.append(list(conv_transpose_node.inputs)[0])
-            weight_name = list(conv_transpose_node.inputs)[1].name
-            bias_name = ".".join(weight_name.split(".")[:-1] + ["bias"])
-            inputs.append(gs.Constant(weight_name, values=conv_w))
-            inputs.append(gs.Constant(bias_name, values=conv_b))
-            outputs = list(bn_node.outputs)
+                inputs = []
+                inputs.append(list(conv_transpose_node.inputs)[0])
+                weight_name = list(conv_transpose_node.inputs)[1].name
+                bias_name = ".".join(weight_name.split(".")[:-1] + ["bias"])
+                inputs.append(gs.Constant(weight_name, values=conv_w))
+                inputs.append(gs.Constant(bias_name, values=conv_b))
+                outputs = list(bn_node.outputs)
 
-            conv_transpose_node.outputs.clear()
-            bn_node.inputs.clear()
-            bn_node.outputs.clear()
+                conv_transpose_node.outputs.clear()
+                bn_node.inputs.clear()
+                bn_node.outputs.clear()
 
-            match.update(
-                {
-                    conv_transpose_node.name: {
-                        "op": conv_transpose_node.op,
-                        "inputs": inputs,
-                        "outputs": outputs,
-                        "name": conv_transpose_node.name,
-                        "attrs": conv_transpose_node.attrs,
-                        "domain": None,
+                match.update(
+                    {
+                        conv_transpose_node.name: {
+                            "op": conv_transpose_node.op,
+                            "inputs": inputs,
+                            "outputs": outputs,
+                            "name": conv_transpose_node.name,
+                            "attrs": conv_transpose_node.attrs,
+                            "domain": None,
+                        }
                     }
-                }
-            )
+                )
 
     return match
 
