@@ -67,12 +67,13 @@ def slim(
         slimmer.output_modification(outputs)
 
     if model_check:
-        slimmer.check_point()
+        slimmer.check_onnx()
 
     if not no_shape_infer:
         slimmer.shape_infer()
 
     if not no_constant_folding:
+        slimmer.check_point()
         while MAX_ITER > 0:
             slimmer.slim(skip_fusion_patterns)
             slimmer.shape_infer()

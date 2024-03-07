@@ -151,9 +151,12 @@ class OnnxSlim:
                 inputs.remove(name_to_input[initializer.name])
                 name_to_input.pop(initializer.name)
 
-    def check_point(self):
+    def check_onnx(self):
         self.input_data_dict = gen_onnxruntime_input_data(self.model)
         self.raw_onnx_output = onnxruntime_inference(self.model, self.input_data_dict)
+
+    def check_point(self):
+        self.graph_check_point = gs.import_onnx(self.model)
 
     def shape_infer(self):
         import onnxruntime.tools.symbolic_shape_infer as onnxrt_symbolic_shape_inference
@@ -321,9 +324,10 @@ class OnnxSlim:
 
     def is_converged(self, iter: int) -> bool:
         logger.debug(f"optimization iter: {iter}")
-        slimmed_info = self.summarize_model(self.model)
-        if "Shape" not in slimmed_info["op_type_counts"].keys():
+        graph = gs.import_onnx(self.model)
+        if graph == self.graph_check_point:
             logger.debug(f"converged at iter: {iter}")
             return True
         else:
+            self.graph_check_point = graph
             return False
