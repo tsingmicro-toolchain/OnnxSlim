@@ -196,6 +196,41 @@ class Variable(Tensor):
         """
         return Variable(self.name, self.dtype, self.shape, self.type)
 
+    def __eq__(self, other):
+        """
+        Perform a check to see if two variables are equal.
+        """
+        if not isinstance(other, Variable):
+            return False
+
+        name_match = self.name == other.name
+
+        inputs_match = len(self.inputs) == len(other.inputs) and all(
+            [
+                inp.name == other_inp.name
+                for inp, other_inp in zip(self.inputs, other.inputs)
+            ]
+        )
+        outputs_match = len(self.outputs) == len(other.outputs) and all(
+            [
+                out.name == other_out.name
+                for out, other_out in zip(self.outputs, other.outputs)
+            ]
+        )
+
+        dtype_match = self.dtype == other.dtype
+        shape_match = self.shape == other.shape
+        type_match = self.type == other.type
+
+        return (
+            name_match
+            and inputs_match
+            and outputs_match
+            and dtype_match
+            and shape_match
+            and type_match
+        )
+
 
 class LazyValues(object):
     """
@@ -234,6 +269,19 @@ class LazyValues(object):
 
     def __repr__(self):  # Hack to make logging output pretty.
         return self.__str__()
+
+    def __eq__(self, other):
+        """
+        Perform a check to see if two variables are equal.
+        """
+        if not isinstance(other, LazyValues):
+            return False
+
+        tensor_match = self.tensor == other.tensor
+        shape_match = self.shape == other.shape
+        dtype_match = self.dtype == other.dtype
+
+        return tensor_match and shape_match and dtype_match
 
 
 class Constant(Tensor):
@@ -303,3 +351,29 @@ class Constant(Tensor):
         ret = self.__str__()
         ret += "\n{:}".format(self._values)
         return ret
+
+    def __eq__(self, other):
+        """
+        Perform a check to see if two variables are equal.
+        """
+        if not isinstance(other, Constant):
+            return False
+
+        name_match = self.name == other.name
+
+        inputs_match = len(self.inputs) == len(other.inputs) and all(
+            [
+                inp.name == other_inp.name
+                for inp, other_inp in zip(self.inputs, other.inputs)
+            ]
+        )
+        outputs_match = len(self.outputs) == len(other.outputs) and all(
+            [
+                out.name == other_out.name
+                for out, other_out in zip(self.outputs, other.outputs)
+            ]
+        )
+
+        value_match = self._values == other._values
+
+        return name_match and inputs_match and outputs_match and value_match
