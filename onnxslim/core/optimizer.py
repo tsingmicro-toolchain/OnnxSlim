@@ -119,46 +119,47 @@ def find_conv_nodes(node, opset):
     if node.op == "Conv":
         if node.i(0).op == "Pad":
             pad_node = node.i(0)
-            pad_value = pad_node.inputs[1].values.tolist()
-            input_variable = node.i(0).inputs[0]
-            input_variable.outputs.remove(pad_node)
+            if isinstance(pad_node.inputs[1], Constant):
+                pad_value = pad_node.inputs[1].values.tolist()
+                input_variable = node.i(0).inputs[0]
+                input_variable.outputs.remove(pad_node)
 
-            pad_variable = node.i(0).outputs[0]  # pad output variable
-            index = node.inputs.index(pad_variable)
-            node.inputs.pop(index)
-            node.inputs.insert(index, input_variable)
+                pad_variable = node.i(0).outputs[0]  # pad output variable
+                index = node.inputs.index(pad_variable)
+                node.inputs.pop(index)
+                node.inputs.insert(index, input_variable)
 
-            inputs = list(node.inputs)
-            outputs = list(node.outputs)
-            attrs = node.attrs
+                inputs = list(node.inputs)
+                outputs = list(node.outputs)
+                attrs = node.attrs
 
-            node.inputs.clear()
-            node.outputs.clear()
-            pad_node.inputs.clear()
-            pad_node.outputs.clear()
+                node.inputs.clear()
+                node.outputs.clear()
+                pad_node.inputs.clear()
+                pad_node.outputs.clear()
 
-            conv_pads = attrs["pads"]
-            len_conv_pads = int(len(conv_pads) / 2)
+                conv_pads = attrs["pads"]
+                len_conv_pads = int(len(conv_pads) / 2)
 
-            len_pads = int(len(pad_value) / 2)
-            pads = (
-                pad_value[len_pads - len_conv_pads : len_pads]
-                + pad_value[len_pads + len_conv_pads :]
-            )
-            attrs["pads"] = pads
+                len_pads = int(len(pad_value) / 2)
+                pads = (
+                    pad_value[len_pads - len_conv_pads : len_pads]
+                    + pad_value[len_pads + len_conv_pads :]
+                )
+                attrs["pads"] = pads
 
-            match.update(
-                {
-                    node.name: {
-                        "op": "Conv",
-                        "inputs": inputs,
-                        "outputs": outputs,
-                        "name": node.name,
-                        "attrs": node.attrs,
-                        "domain": None,
+                match.update(
+                    {
+                        node.name: {
+                            "op": "Conv",
+                            "inputs": inputs,
+                            "outputs": outputs,
+                            "name": node.name,
+                            "attrs": node.attrs,
+                            "domain": None,
+                        }
                     }
-                }
-            )
+                )
 
     return match
 
