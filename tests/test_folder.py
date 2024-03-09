@@ -1,4 +1,5 @@
 import glob
+import os
 import subprocess
 
 import pytest
@@ -17,3 +18,18 @@ def test_model_file(model_file):
     # Assert the expected return code
     print(output)
     assert result.returncode == 0
+    if result.returncode == 0:
+        os.remove(slim_model_file)
+
+
+if __name__ == "__main__":
+    pytest.main(
+        [
+            "-p",
+            "no:warnings",
+            "-n",
+            "10",
+            "-v",
+            "tests/test_folder.py",
+        ]
+    )
