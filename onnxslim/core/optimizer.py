@@ -137,7 +137,6 @@ def find_conv_nodes(node, opset):
                 node.outputs.clear()
                 pad_node.inputs.clear()
                 pad_node.outputs.clear()
-
                 conv_pads = attrs["pads"]
                 len_conv_pads = int(len(conv_pads) / 2)
 
@@ -146,8 +145,9 @@ def find_conv_nodes(node, opset):
                     pad_value[len_pads - len_conv_pads : len_pads]
                     + pad_value[len_pads + len_conv_pads :]
                 )
-                attrs["pads"] = pads
 
+                pads = [pad + conv_pad for pad, conv_pad in zip(pads, conv_pads)]
+                attrs["pads"] = pads
                 match.update(
                     {
                         node.name: {
@@ -374,28 +374,43 @@ def find_slice_nodes(node, opset):
             first_reshape_node_users = get_node_users(first_reshape_node)
             if len(first_reshape_node_users) == 1:
                 second_reshape_node = node
-                inputs = []
-                inputs.append(first_reshape_node_inputs[0])
-                inputs.append(second_reshape_node.inputs[1])
 
-                outputs = list(second_reshape_node.outputs)
+                def check_constant_mergeable(reshape_node):
+                    if isinstance(reshape_node.inputs[1], Constant):
+                        input_shape = reshape_node.inputs[0].shape
+                        reshape_shape = reshape_node.inputs[1].values
+                        if input_shape != None and np.any(reshape_shape == 0):
+                            shape = [
+                                input_shape[i] if dim_size == 0 else dim_size
+                                for i, dim_size in enumerate(reshape_shape)
+                            ]
+                            if not all(isinstance(item, int) for item in shape):
+                                return False
+                    return True
 
-                first_reshape_node.outputs.clear()
-                second_reshape_node.inputs.clear()
-                second_reshape_node.outputs.clear()
+                if check_constant_mergeable(
+                    first_reshape_node
+                ) and check_constant_mergeable(second_reshape_node):
+                    inputs = []
+                    inputs.append(first_reshape_node_inputs[0])
+                    inputs.append(second_reshape_node.inputs[1])
+                    outputs = list(second_reshape_node.outputs)
+                    first_reshape_node.outputs.clear()
+                    second_reshape_node.inputs.clear()
+                    second_reshape_node.outputs.clear()
 
-                match.update(
-                    {
-                        first_reshape_node.name: {
-                            "op": "Reshape",
-                            "inputs": inputs,
-                            "outputs": outputs,
-                            "name": first_reshape_node.name,
-                            "attrs": first_reshape_node.attrs,
-                            "domain": None,
+                    match.update(
+                        {
+                            first_reshape_node.name: {
+                                "op": "Reshape",
+                                "inputs": inputs,
+                                "outputs": outputs,
+                                "name": first_reshape_node.name,
+                                "attrs": first_reshape_node.attrs,
+                                "domain": None,
+                            }
                         }
-                    }
-                )
+                    )
 
     return match
 
