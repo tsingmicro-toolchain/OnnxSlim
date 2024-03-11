@@ -331,3 +331,15 @@ class OnnxSlim:
         else:
             self.graph_check_point = graph
             return False
+
+    def save_as_external_data(self, model_path: str):
+        location = os.path.basename(model_path) + ".data"
+        if os.path.exists(location):
+            os.remove(location)
+        onnx.save(
+            self.model,
+            model_path,
+            save_as_external_data=True,
+            all_tensors_to_one_file=True,
+            location=location,
+        )
