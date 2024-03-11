@@ -15,6 +15,7 @@ def slim(
     skip_fusion_patterns: str = None,
     inspect: bool = False,
     dump_to_disk: bool = False,
+    save_as_external_data: bool = False,
 ):
     """
     Slims down or optimizes an ONNX model.
@@ -42,6 +43,8 @@ def slim(
 
         dump_to_disk (bool, optional): Flag indicating whether to dump the model to disk. Default is False.
 
+        save_as_external_data (bool, optional): Flag indicating whether to split onnx as model and weight. Default is False.
+
     Returns:
         onnx.ModelProto/None: If `output_model` is None, return slimmed model else return None.
     """
@@ -58,6 +61,10 @@ def slim(
     slimmer = OnnxSlim(model)
     if inspect:
         slimmer.summary(inspect, dump_to_disk)
+        return None
+
+    if save_as_external_data:
+        slimmer.save_as_external_data(output_model)
         return None
 
     if input_shapes:
@@ -171,6 +178,13 @@ def main():
         help="dump model info to disk, default False.",
     )
 
+    # Dump Model Info to Disk
+    parser.add_argument(
+        "--save_as_external_data",
+        action="store_true",
+        help="split onnx as model and weight, default False.",
+    )
+
     args, unknown = parser.parse_known_args()
 
     if unknown:
@@ -195,6 +209,7 @@ def main():
         args.skip_fusion_patterns,
         args.inspect,
         args.dump_to_disk,
+        args.save_as_external_data,
     )
 
     return 0

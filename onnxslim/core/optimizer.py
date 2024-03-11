@@ -776,10 +776,58 @@ def find_matches(graph: Graph, fusion_patterns: dict):
     return match_map
 
 
+def find_and_remove_replaceable_nodes(nodes):
+    keep_nodes = [True] * len(nodes)
+    for i, node in enumerate(nodes):
+        if keep_nodes[i]:
+            for j in range(i + 1, len(nodes)):
+                if keep_nodes[j]:
+                    if can_be_replaced(node, nodes[j]):
+                        keep_nodes[j] = False
+                        logger.debug(
+                            f"Node {nodes[j].name} can be replaced by {node.name}"
+                        )
+                        existing_node = node
+                        to_be_removed_node = nodes[j]
+                        users = get_node_users(to_be_removed_node)
+                        for user in users:
+                            for idx, inp in enumerate(user.inputs):
+                                if inp in to_be_removed_node.outputs:
+                                    index = user.inputs.index(inp)
+                                    user.inputs.pop(index)
+                                    user.inputs.insert(index, existing_node.outputs[0])
+
+                        to_be_removed_node.inputs.clear()
+                        to_be_removed_node.outputs.clear()
+
+
+def can_be_replaced(node, other_node):
+    attrs_match = node.op == other_node.op and node.attrs == other_node.attrs
+    inputs_match = len(node.inputs) == len(other_node.inputs) and all(
+        [inp == other_inp for inp, other_inp in zip(node.inputs, other_node.inputs)]
+    )
+
+    return attrs_match and inputs_match
+
+
+def subexpression_elimination(graph):
+    nodes_by_op = {}
+
+    for node in graph.nodes:
+        op = node.op
+        if op not in nodes_by_op:
+            nodes_by_op[op] = []
+        nodes_by_op[op].append(node)
+
+    for op, nodes in nodes_by_op.items():
+        find_and_remove_replaceable_nodes(nodes)
+
+
 def optimize_model(
     model: onnx.ModelProto, skip_fusion_patterns: str = None
 ) -> onnx.ModelProto:
     graph = gs.import_onnx(model)
+    subexpression_elimination(graph)
     graph.fold_constants().cleanup()
     fusion_patterns = get_fusion_patterns(skip_fusion_patterns)
     fusion_pairs = find_matches(graph, fusion_patterns)
