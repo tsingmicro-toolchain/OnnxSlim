@@ -204,7 +204,6 @@ class Variable(Tensor):
             return False
 
         name_match = self.name == other.name
-
         inputs_match = len(self.inputs) == len(other.inputs) and all(
             [
                 inp.name == other_inp.name
@@ -359,21 +358,6 @@ class Constant(Tensor):
         if not isinstance(other, Constant):
             return False
 
-        name_match = self.name == other.name
+        value_match = np.array_equal(self.values, other.values)
 
-        inputs_match = len(self.inputs) == len(other.inputs) and all(
-            [
-                inp.name == other_inp.name
-                for inp, other_inp in zip(self.inputs, other.inputs)
-            ]
-        )
-        outputs_match = len(self.outputs) == len(other.outputs) and all(
-            [
-                out.name == other_out.name
-                for out, other_out in zip(self.outputs, other.outputs)
-            ]
-        )
-
-        value_match = self._values == other._values
-
-        return name_match and inputs_match and outputs_match and value_match
+        return value_match
