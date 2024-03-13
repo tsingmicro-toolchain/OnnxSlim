@@ -1,6 +1,7 @@
 from typing import Union
 
 import onnx
+from loguru import logger
 
 
 def slim(
@@ -49,8 +50,32 @@ def slim(
         onnx.ModelProto/None: If `output_model` is None, return slimmed model else return None.
     """
     import os
+    from pathlib import Path
 
-    from onnxslim.core.slim import OnnxSlim
+    from onnxslim.core.slim import (
+        check_onnx,
+        check_point,
+        check_result,
+        convert_data_format,
+        freeze,
+        init_logging,
+        input_shape_modification,
+        model_save_as_external_data,
+        optimize,
+        output_modification,
+        save,
+        shape_infer,
+        summarize_model,
+        summary,
+    )
+
+    from ..utils.utils import (
+        dump_model_info_to_disk,
+        onnxruntime_inference,
+        print_model_info_as_table,
+    )
+
+    init_logging(1)
 
     MAX_ITER = (
         10
@@ -58,51 +83,68 @@ def slim(
         else int(os.getenv("ONNXSLIM_MAX_ITER"))
     )
 
-    slimmer = OnnxSlim(model)
+    if isinstance(model, str):
+        model_name = Path(model).name
+        model = onnx.load(model)
+    else:
+        model = model
+        model_name = "ONNX_Model"
+
+    freeze(model)
+    float_info = summarize_model(model)
     if inspect:
-        slimmer.summary(inspect, dump_to_disk)
+        print_model_info_as_table(model_name, [float_info])
+        if dump_to_disk:
+            dump_model_info_to_disk(model_name, float_info)
         return None
 
     if save_as_external_data:
-        slimmer.save_as_external_data(output_model)
+        model_save_as_external_data(model, output_model)
         return None
 
     if input_shapes:
-        slimmer.input_shape_modification(input_shapes)
+        input_shape_modification(input_shapes)
 
     if outputs:
-        slimmer.output_modification(outputs)
+        output_modification(outputs)
 
     if model_check:
-        slimmer.check_onnx()
+        input_data_dict, raw_onnx_output = check_onnx(model)
 
     if not no_shape_infer:
-        slimmer.shape_infer()
+        model = shape_infer(model)
 
     if not no_constant_folding:
-        slimmer.check_point()
+        graph_check_point = check_point(model)
         while MAX_ITER > 0:
-            slimmer.slim(skip_fusion_patterns)
-            slimmer.shape_infer()
-            if slimmer.is_converged(MAX_ITER):
+            model = optimize(model, skip_fusion_patterns)
+            model = shape_infer(model)
+            graph = check_point(model)
+            if graph == graph_check_point:
+                logger.debug(f"converged at iter: {MAX_ITER}")
                 break
+            else:
+                graph_check_point = graph
+
             MAX_ITER -= 1
 
     if dtype:
-        slimmer.convert_data_format(dtype)
+        model = convert_data_format(model, dtype)
 
-    slimmer.save(output_model, model_check)
+    if model_check:
+        slimmed_onnx_output = onnxruntime_inference(model, input_data_dict)
+        check_result(raw_onnx_output, slimmed_onnx_output)
+
+    save(model, output_model, model_check)
 
     if not output_model:
-        return slimmer.model
+        return model
     else:
-        slimmer.summary()
+        summary(model, float_info, model_name)
 
 
 def main():
     import argparse
-
-    from loguru import logger
 
     import onnxslim
 

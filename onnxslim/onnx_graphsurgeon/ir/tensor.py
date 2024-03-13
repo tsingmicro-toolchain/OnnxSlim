@@ -276,7 +276,7 @@ class LazyValues(object):
         if not isinstance(other, LazyValues):
             return False
 
-        tensor_match = self.tensor == other.tensor
+        tensor_match = self.tensor.raw_data == other.tensor.raw_data
         shape_match = self.shape == other.shape
         dtype_match = self.dtype == other.dtype
 
@@ -358,6 +358,11 @@ class Constant(Tensor):
         if not isinstance(other, Constant):
             return False
 
-        value_match = np.array_equal(self.values, other.values)
+        if isinstance(self._values, LazyValues) and isinstance(
+            other._values, LazyValues
+        ):
+            value_match = self._values == other._values
+        else:
+            value_match = np.array_equal(self.values, other.values)
 
         return value_match

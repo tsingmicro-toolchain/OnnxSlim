@@ -104,6 +104,7 @@ class Graph(object):
         import_domains=None,
         producer_name: str = None,
         producer_version: str = None,
+        model_size: int = 0,
     ):
         """
         Args:
@@ -128,6 +129,7 @@ class Graph(object):
         self.producer_name = misc.default_value(producer_name, "")
         self.producer_version = misc.default_value(producer_version, "")
         self.import_domains = import_domains
+        self.model_size = model_size
         # Printing graphs can be very expensive
         G_LOGGER.ultra_verbose(lambda: "Created Graph: {:}".format(self))
         # For layer() function
@@ -163,19 +165,34 @@ class Graph(object):
         return super().__setattr__(name, value)
 
     def __eq__(self, other: "Graph"):
-        nodes_match = len(self.nodes) == len(other.nodes) and all(
-            [node == other_node for node, other_node in zip(self.nodes, other.nodes)]
-        )
-        inputs_match = len(self.inputs) == len(other.inputs) and all(
-            [inp == other_inp for inp, other_inp in zip(self.inputs, other.inputs)]
-        )
-        outputs_match = len(self.outputs) == len(other.outputs) and all(
-            [out == other_out for out, other_out in zip(self.outputs, other.outputs)]
-        )
+        def sequences_equal(seq1, seq2):
+            length_match = len(seq1) == len(seq2)
+            if not length_match:
+                return False
+
+            for elem1, elem2 in zip(seq1, seq2):
+                if elem1 != elem2:
+                    return False
+
+            return True
+
+        nodes_match = sequences_equal(self.nodes, other.nodes)
+        if not nodes_match:
+            return False
+        inputs_match = sequences_equal(self.inputs, other.inputs)
+        if not inputs_match:
+            return False
+        outputs_match = sequences_equal(self.outputs, other.outputs)
+        if not outputs_match:
+            return False
+
         opset_matches = (
             self.opset == other.opset and self.import_domains == other.import_domains
         )
-        return nodes_match and inputs_match and outputs_match and opset_matches
+        if not opset_matches:
+            return False
+
+        return True
 
     def node_ids(self):
         """
@@ -1297,6 +1314,7 @@ class Graph(object):
             doc_string=copy.copy(self.doc_string),
             opset=copy.copy(self.opset),
             import_domains=self.import_domains,
+            model_size=self.model_size,
         )
 
     def __str__(self):

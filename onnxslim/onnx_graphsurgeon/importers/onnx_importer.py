@@ -355,6 +355,7 @@ class OnnxImporter(BaseImporter):
             producer_version=producer_version,
             opset=opset,
             import_domains=import_domains,
+            model_size=onnx_graph.ByteSize(),
         )
 
 

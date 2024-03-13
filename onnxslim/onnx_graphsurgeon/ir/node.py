@@ -169,16 +169,36 @@ class Node(object):
         Check whether two nodes are equal by comparing name, attributes, op, inputs, and outputs.
         """
         G_LOGGER.verbose("Comparing node: {:} with {:}".format(self.name, other.name))
+
+        def sequences_equal(seq1, seq2):
+            length_match = len(seq1) == len(seq2)
+            if not length_match:
+                return False
+
+            for elem1, elem2 in zip(seq1, seq2):
+                if elem1 != elem2:
+                    return False
+
+            return True
+
         attrs_match = (
             self.name == other.name
             and self.op == other.op
             and self.attrs == other.attrs
         )
-        inputs_match = len(self.inputs) == len(other.inputs) and all(
-            [inp == other_inp for inp, other_inp in zip(self.inputs, other.inputs)]
-        )
-        outputs_match = len(self.outputs) == len(other.outputs) and all(
-            [out == other_out for out, other_out in zip(self.outputs, other.outputs)]
-        )
+        if not attrs_match:
+            return False
+
+        inputs_match = sequences_equal(self.inputs, other.inputs)
+        if not inputs_match:
+            return False
+
+        outputs_match = sequences_equal(self.outputs, other.outputs)
+        if not outputs_match:
+            return False
+
         domain_match = self.domain == other.domain
-        return attrs_match and inputs_match and outputs_match and domain_match
+        if not domain_match:
+            return False
+
+        return True

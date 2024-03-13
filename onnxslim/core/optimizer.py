@@ -1,7 +1,7 @@
 import contextlib
 from collections import Counter, OrderedDict
 
-from typing import List
+from typing import List, Union
 
 import numpy as np
 
@@ -784,9 +784,7 @@ def find_and_remove_replaceable_nodes(nodes):
                 if keep_nodes[j]:
                     if can_be_replaced(node, nodes[j]):
                         keep_nodes[j] = False
-                        logger.debug(
-                            f"Node {nodes[j].name} can be replaced by {node.name}"
-                        )
+                        logger.debug(f"Node {nodes[j].name} can be replaced by {node.name}")
                         existing_node = node
                         to_be_removed_node = nodes[j]
                         users = get_node_users(to_be_removed_node)
@@ -801,11 +799,21 @@ def find_and_remove_replaceable_nodes(nodes):
                         to_be_removed_node.outputs.clear()
 
 
+def sequences_equal(seq1, seq2):
+    length_match = len(seq1) == len(seq2)
+    if not length_match:
+        return False
+
+    for elem1, elem2 in zip(seq1, seq2):
+        if elem1 != elem2:
+            return False
+
+    return True
+
+
 def can_be_replaced(node, other_node):
     attrs_match = node.op == other_node.op and node.attrs == other_node.attrs
-    inputs_match = len(node.inputs) == len(other_node.inputs) and all(
-        [inp == other_inp for inp, other_inp in zip(node.inputs, other_node.inputs)]
-    )
+    inputs_match = sequences_equal(node.inputs, other_node.inputs)
 
     return attrs_match and inputs_match
 
@@ -824,9 +832,12 @@ def subexpression_elimination(graph):
 
 
 def optimize_model(
-    model: onnx.ModelProto, skip_fusion_patterns: str = None
+    model: Union[onnx.ModelProto, gs.Graph], skip_fusion_patterns: str = None
 ) -> onnx.ModelProto:
-    graph = gs.import_onnx(model)
+    if isinstance(model, gs.Graph):
+        graph = model
+    else:
+        graph = gs.import_onnx(model)
     subexpression_elimination(graph)
     graph.fold_constants().cleanup()
     fusion_patterns = get_fusion_patterns(skip_fusion_patterns)
