@@ -85,6 +85,19 @@ def delete_node(node):
         node.outputs.clear()
 
 
+def check_shape(shapes):
+    string_count = 0
+    non_negative_int_count = 0
+
+    for item in shapes:
+        if isinstance(item, str):
+            string_count += 1
+        elif isinstance(item, int) and item > 0:
+            non_negative_int_count += 1
+
+    return string_count == 1 and non_negative_int_count == len(shapes) - 1
+
+
 def graph_constant_fold_inplace(graph):
     for node in graph.nodes:
         if node.op == "Identity" or node.op == "Dropout":
@@ -102,6 +115,19 @@ def graph_constant_fold_inplace(graph):
             inp_dtype = [dtype_to_onnx(input.dtype) for input in node.inputs][0]
             if inp_dtype == node.attrs["to"]:
                 delete_node(node)
+        elif node.op == "Reshape":
+            node_output_shape = node.outputs[0].shape
+            if node_output_shape and check_shape(node_output_shape):
+                shapes = [
+                    shape if isinstance(shape, int) else -1
+                    for shape in node_output_shape
+                ]
+                reshape_const = gs.Constant(
+                    node.inputs[1].name + "_",
+                    values=np.array(shapes, dtype=np.int64),
+                )
+                node.inputs.pop(1)
+                node.inputs.insert(1, reshape_const)
 
 
 @register_fusion_pattern("FusionPadConv")
@@ -356,7 +382,7 @@ def find_slice_nodes(node, opset):
 
 
 @register_fusion_pattern("EliminationReshape")
-def find_slice_nodes(node, opset):
+def find_reshape_nodes(node, opset):
     # fmt: off
     '''
              x
@@ -784,7 +810,9 @@ def find_and_remove_replaceable_nodes(nodes):
                 if keep_nodes[j]:
                     if can_be_replaced(node, nodes[j]):
                         keep_nodes[j] = False
-                        logger.debug(f"Node {nodes[j].name} can be replaced by {node.name}")
+                        logger.debug(
+                            f"Node {nodes[j].name} can be replaced by {node.name}"
+                        )
                         existing_node = node
                         to_be_removed_node = nodes[j]
                         users = get_node_users(to_be_removed_node)
