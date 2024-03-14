@@ -11,7 +11,7 @@ from loguru import logger
 import onnxslim.onnx_graphsurgeon as gs
 from onnxslim.onnx_graphsurgeon.exporters.onnx_exporter import dtype_to_onnx
 from onnxslim.onnx_graphsurgeon.ir.graph import Graph
-from onnxslim.onnx_graphsurgeon.ir.tensor import Constant
+from onnxslim.onnx_graphsurgeon.ir.tensor import Constant, Variable
 
 
 DEFAULT_FUSION_PATTERNS = OrderedDict()
@@ -128,6 +128,17 @@ def graph_constant_fold_inplace(graph):
                 )
                 node.inputs.pop(1)
                 node.inputs.insert(1, reshape_const)
+        elif node.op == "Mul":
+            if (
+                isinstance(node.inputs[1], Constant)
+                and isinstance(node.inputs[0], Variable)
+            ) or (
+                isinstance(node.inputs[0], Constant)
+                and isinstance(node.inputs[1], Variable)
+            ):
+                constant_variable = get_constant_variable(node)
+                if np.all(constant_variable.values == 1):
+                    delete_node(node)
 
 
 @register_fusion_pattern("FusionPadConv")
