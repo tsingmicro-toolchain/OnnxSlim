@@ -188,7 +188,7 @@ def shape_infer(model: onnx.ModelProto):
             tmp_dir = tempfile.TemporaryDirectory()
             tmp_path = os.path.join(tmp_dir.name, "tmp.onnx")
             tmp_infer_path = os.path.join(tmp_dir.name, "tmp_infer.onnx")
-            save(tmp_path)
+            save(model, tmp_path)
             onnx.shape_inference.infer_shapes_path(tmp_path, tmp_infer_path)
             model = onnx.load(tmp_infer_path)
         else:

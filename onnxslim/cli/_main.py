@@ -103,10 +103,10 @@ def slim(
         return None
 
     if input_shapes:
-        input_shape_modification(input_shapes)
+        model = input_shape_modification(model, input_shapes)
 
     if outputs:
-        output_modification(outputs)
+        model = output_modification(model, outputs)
 
     if model_check:
         input_data_dict, raw_onnx_output = check_onnx(model)
