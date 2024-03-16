@@ -91,15 +91,18 @@ def slim(
         model_name = "ONNX_Model"
 
     freeze(model)
-    float_info = summarize_model(model)
+
+    if save_as_external_data:
+        model_save_as_external_data(model, output_model)
+        return None
+
+    if output_model:
+        float_info = summarize_model(model)
+
     if inspect:
         print_model_info_as_table(model_name, [float_info])
         if dump_to_disk:
             dump_model_info_to_disk(model_name, float_info)
-        return None
-
-    if save_as_external_data:
-        model_save_as_external_data(model, output_model)
         return None
 
     if input_shapes:
@@ -117,6 +120,7 @@ def slim(
     if not no_constant_folding:
         graph_check_point = check_point(model)
         while MAX_ITER > 0:
+            logger.debug(f"iter: {MAX_ITER}")
             model = optimize(model, skip_fusion_patterns)
             model = shape_infer(model)
             graph = check_point(model)
