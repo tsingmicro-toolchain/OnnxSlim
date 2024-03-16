@@ -63,15 +63,15 @@ def get_previous_node_by_type(node, op_type, trajectory=[]):
             return get_previous_node_by_type(node_feed, op_type, trajectory)
 
 
-def get_constant_variable(node):
-    for input in list(node.inputs):
+def get_constant_variable(node, return_idx=False):
+    for idx, input in enumerate(list(node.inputs)):
         if isinstance(input, Constant):
-            return input
+            return input if not return_idx else (idx, input)
 
 
-def delete_node(node):
-    input_variable = node.inputs[0]
-    node_variable = node.outputs[0]
+def delete_node(node, input_var_idx=0, output_var_idx=0):
+    input_variable = node.inputs[input_var_idx]
+    node_variable = node.outputs[output_var_idx]
     next_nodes = get_node_users(node)
     if next_nodes:
         for next_node in next_nodes:
@@ -80,8 +80,8 @@ def delete_node(node):
             next_node.inputs.insert(index, input_variable)
     else:
         input_node = node.i()
-        input_node.outputs.remove(node.inputs[0])
-        input_node.outputs.append(node.outputs[0])
+        input_node.outputs.remove(node.inputs[input_var_idx])
+        input_node.outputs.append(node.outputs[output_var_idx])
         node.outputs.clear()
 
 
@@ -136,9 +136,22 @@ def graph_constant_fold_inplace(graph):
                 isinstance(node.inputs[0], Constant)
                 and isinstance(node.inputs[1], Variable)
             ):
-                constant_variable = get_constant_variable(node)
+                idx, constant_variable = get_constant_variable(node, return_idx=True)
                 if np.all(constant_variable.values == 1):
-                    delete_node(node)
+                    var_idx = 0 if idx == 1 else 1
+                    delete_node(node, var_idx)
+        elif node.op == "Add":
+            if (
+                isinstance(node.inputs[1], Constant)
+                and isinstance(node.inputs[0], Variable)
+            ) or (
+                isinstance(node.inputs[0], Constant)
+                and isinstance(node.inputs[1], Variable)
+            ):
+                idx, constant_variable = get_constant_variable(node, return_idx=True)
+                if np.all(constant_variable.values == 0):
+                    idx = 0 if idx == 1 else 1
+                    delete_node(node, idx)
 
 
 @register_fusion_pattern("FusionPadConv")
@@ -814,28 +827,56 @@ def find_matches(graph: Graph, fusion_patterns: dict):
 
 
 def find_and_remove_replaceable_nodes(nodes):
-    keep_nodes = [True] * len(nodes)
-    for i, node in enumerate(nodes):
-        if keep_nodes[i]:
-            for j in range(i + 1, len(nodes)):
-                if keep_nodes[j]:
-                    if can_be_replaced(node, nodes[j]):
-                        keep_nodes[j] = False
-                        logger.debug(
-                            f"Node {nodes[j].name} can be replaced by {node.name}"
-                        )
-                        existing_node = node
-                        to_be_removed_node = nodes[j]
-                        users = get_node_users(to_be_removed_node)
-                        for user in users:
-                            for idx, inp in enumerate(user.inputs):
-                                if inp in to_be_removed_node.outputs:
-                                    index = user.inputs.index(inp)
-                                    user.inputs.pop(index)
-                                    user.inputs.insert(index, existing_node.outputs[0])
+    def get_node_key(node):
+        input_names = []
+        for input_node in node.inputs:
+            if isinstance(input_node, Variable):
+                input_names.append(input_node.name)
+        if input_names:
+            return "_".join(input_names)
+        return None
 
-                        to_be_removed_node.inputs.clear()
-                        to_be_removed_node.outputs.clear()
+    def replace_node_references(existing_node, to_be_removed_node):
+        users = get_node_users(to_be_removed_node)
+        for user in users:
+            for idx, inp in enumerate(user.inputs):
+                if inp in to_be_removed_node.outputs:
+                    index = user.inputs.index(inp)
+                    user.inputs.pop(index)
+                    user.inputs.insert(index, existing_node.outputs[0])
+
+        to_be_removed_node.inputs.clear()
+        to_be_removed_node.outputs.clear()
+
+    node_dict = {}
+    for node in nodes:
+        key = get_node_key(node)
+        if key:
+            if key in node_dict:
+                node_dict[key].append(node)
+            else:
+                node_dict[key] = [node]
+
+    for key, bucketed_nodes in node_dict.items():
+        if len(bucketed_nodes) > 1:
+            keep_nodes = [True] * len(bucketed_nodes)
+            for i, node in enumerate(bucketed_nodes):
+                if keep_nodes[i]:
+                    for j in range(i + 1, len(bucketed_nodes)):
+                        if keep_nodes[j]:
+                            logger.debug(
+                                f"node.op {bucketed_nodes[0].op} idx i: {i}, idx j: {j}"
+                            )
+                            if can_be_replaced(node, bucketed_nodes[j]):
+                                keep_nodes[j] = False
+                                existing_node = node
+                                to_be_removed_node = bucketed_nodes[j]
+                                replace_node_references(
+                                    existing_node, to_be_removed_node
+                                )
+                                logger.debug(
+                                    f"Node {to_be_removed_node.name} can be replaced by {existing_node.name}"
+                                )
 
 
 def sequences_equal(seq1, seq2):
@@ -877,13 +918,14 @@ def optimize_model(
         graph = model
     else:
         graph = gs.import_onnx(model)
-    subexpression_elimination(graph)
-    graph.fold_constants().cleanup()
     fusion_patterns = get_fusion_patterns(skip_fusion_patterns)
     fusion_pairs = find_matches(graph, fusion_patterns)
     for _, match in fusion_pairs.items():
         graph.replace_custom_layer(**match)
+    graph.cleanup(remove_unused_graph_inputs=True).toposort()
     graph_constant_fold_inplace(graph)
+    graph.cleanup(remove_unused_graph_inputs=True).toposort()
+    subexpression_elimination(graph)
     graph.cleanup(remove_unused_graph_inputs=True).toposort()
     model = gs.export_onnx(graph)
 
