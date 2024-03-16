@@ -2,7 +2,7 @@ import logging
 import os
 import sys
 import tempfile
-from typing import Dict
+from typing import Dict, List
 
 import numpy as np
 import onnx
@@ -29,7 +29,7 @@ from .optimizer import delete_node, optimize_model
 DEBUG = bool(os.getenv("ONNXSLIM_DEBUG"))
 
 
-def init_logging(log_level: int):
+def init_logging(log_level: int = 1):
     logger.remove()
     if log_level == 0 or DEBUG:  # DEBUG
         logger.add(sys.stderr, level=G_LOGGER.DEBUG)
@@ -48,40 +48,80 @@ def init_logging(log_level: int):
     ort.set_default_logger_severity(3)
 
 
+def get_opset(model: onnx.ModelProto) -> int:
+    try:
+        for importer in model.opset_import:
+            if importer.domain == "" or importer.domain == "ai.onnx":
+                return importer.version
+
+        return None
+    except:
+        return None
+
+
 def summarize_model(model: onnx.ModelProto) -> Dict:
+    logger.debug("Start summarizing model.")
     model_info = {}
 
     model_size = model.ByteSize()
     model_info["model_size"] = model_size
-    model_info["model_size"] = [model_size]
 
-    graph = gs.import_onnx(model)
     op_info = {}
     op_type_counts = {}
 
-    for node in graph.nodes:
-        op_type = node.op
+    def get_tensor_dtype_shape(tensor):
+        type_str = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE.get(
+            tensor.type.tensor_type.elem_type, "Unknown"
+        )
+        shape = None
+        if tensor.type.tensor_type.HasField("shape"):
+            shape = []
+            for dim in tensor.type.tensor_type.shape.dim:
+                if dim.HasField("dim_param"):
+                    shape.append(dim.dim_param)
+                elif dim.HasField("dim_value"):
+                    shape.append(dim.dim_value)
+                else:
+                    shape.append(None)
+
+        return (type_str, shape)
+
+    def get_shape(inputs: onnx.ModelProto) -> Dict[str, List[int]]:
+        op_shape_info = {}
+        for input in inputs:
+            type_str, shape = get_tensor_dtype_shape(input)
+            op_shape_info[input.name] = str(type_str) + ": " + str(tuple(shape))
+
+        return op_shape_info
+
+    value_info_dict = {
+        value_info.name: value_info for value_info in model.graph.value_info
+    }
+
+    for node in model.graph.node:
+        op_type = node.op_type
         if op_type in op_type_counts:
             op_type_counts[op_type] += 1
         else:
             op_type_counts[op_type] = 1
 
-        op_info[node.name] = [
-            node.op,
-            [[output.dtype, output.shape] for output in node.outputs],
-        ]
+        for output in node.output:
+            shapes = []
+            if output in value_info_dict:
+                tensor = value_info_dict[output]
+                type_str, shape = get_tensor_dtype_shape(tensor)
+                shapes.append([type_str, shape])
 
-    model_info["op_set"] = str(graph.opset)
+        op_info[node.name] = [node.op_type, shapes]
+
+    model_info["op_set"] = str(get_opset(model))
     model_info["op_info"] = op_info
     model_info["op_type_counts"] = op_type_counts
-    model_info["op_input_info"] = {
-        input.name: str(input.dtype) + ": " + str(input.shape) for input in graph.inputs
-    }
-    model_info["op_output_info"] = {
-        output.name: str(output.dtype) + ": " + str(output.shape)
-        for output in graph.outputs
-    }
 
+    model_info["op_input_info"] = get_shape(model.graph.input)
+    model_info["op_output_info"] = get_shape(model.graph.output)
+
+    logger.debug("Finish summarizing model.")
     return model_info
 
 
@@ -179,6 +219,7 @@ def check_onnx(model: onnx.ModelProto):
 
 
 def shape_infer(model: onnx.ModelProto):
+    logger.debug("Start shape inference.")
     try:
         model = onnxrt_symbolic_shape_inference.SymbolicShapeInference.infer_shapes(
             model, auto_merge=True
@@ -195,14 +236,20 @@ def shape_infer(model: onnx.ModelProto):
             model = onnx.shape_inference.infer_shapes(model)
     if DEBUG:
         onnx.save(model, "debug_shape_infer.onnx")
-
+    logger.debug("Finish shape inference.")
     return model
 
 
 def optimize(model: onnx.ModelProto, skip_fusion_patterns: str = None):
+    logger.debug("Start converting model to gs.")
     graph = gs.import_onnx(model).toposort()
+    logger.debug("Finish converting model to gs.")
+    logger.debug("Start constant folding.")
     graph.fold_constants().cleanup().toposort()
+    logger.debug("Finish constant folding.")
+    logger.debug("Start optimize model.")
     model = optimize_model(graph, skip_fusion_patterns)
+    logger.debug("Finish optimize model.")
     if DEBUG:
         onnx.save(model, "debug_slim.onnx")
 
@@ -301,14 +348,6 @@ def check_result(raw_onnx_output, slimmed_onnx_output):
                 logger.warning("Model output mismatch after slimming.")
                 logger.warning("Please check the model carefully.")
                 return
-
-
-def summary(model: onnx.ModelProto, float_info, model_name):
-    slimmed_info = summarize_model(model)
-    print_model_info_as_table(
-        model_name,
-        [float_info, slimmed_info],
-    )
 
 
 def freeze(model: onnx.ModelProto):

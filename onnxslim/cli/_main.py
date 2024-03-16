@@ -42,7 +42,7 @@ def slim(
 
         inspect (bool, optional): Flag indicating whether to inspect the model. Default is False.
 
-        dump_to_disk (bool, optional): Flag indicating whether to dump the model to disk. Default is False.
+        dump_to_disk (bool, optional): Flag indicating whether to dump the model detail to disk. Default is False.
 
         save_as_external_data (bool, optional): Flag indicating whether to split onnx as model and weight. Default is False.
 
@@ -66,7 +66,6 @@ def slim(
         save,
         shape_infer,
         summarize_model,
-        summary,
     )
 
     from ..utils.utils import (
@@ -96,7 +95,7 @@ def slim(
         model_save_as_external_data(model, output_model)
         return None
 
-    if output_model:
+    if output_model or inspect:
         float_info = summarize_model(model)
 
     if inspect:
@@ -139,12 +138,19 @@ def slim(
         slimmed_onnx_output = onnxruntime_inference(model, input_data_dict)
         check_result(raw_onnx_output, slimmed_onnx_output)
 
-    save(model, output_model, model_check)
-
     if not output_model:
         return model
     else:
-        summary(model, float_info, model_name)
+        slimmed_info = summarize_model(model)
+        save(model, output_model, model_check)
+        if slimmed_info["model_size"] >= onnx.checker.MAXIMUM_PROTOBUF:
+            model_size = model.ByteSize()
+            slimmed_info["model_size"] = [model_size, slimmed_info["model_size"]]
+
+        print_model_info_as_table(
+            model_name,
+            [float_info, slimmed_info],
+        )
 
 
 def main():
