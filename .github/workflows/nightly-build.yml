@@ -22,3 +22,5 @@ jobs:
         pip install .
         onnxslim --version
         ls ../
+        ls ../..
+        ls /root
