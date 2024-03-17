@@ -20,7 +20,5 @@ jobs:
     - name: model test
       run: |
         pip install .
-        onnxslim --version
-        ls ../
-        ls ../..
-        ls /root
+        pip install pytest
+        python tests/test_folder.py --model-dir /root/data/modelzoo
