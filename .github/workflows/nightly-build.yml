@@ -20,5 +20,5 @@ jobs:
     - name: model test
       run: |
         pip install .
-        pip install pytest
+        pip install pytest onnxruntime
         python tests/test_folder.py --model-dir /root/data/modelzoo
