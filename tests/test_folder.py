@@ -36,6 +36,9 @@ def test_model_file(model_file):
         output = result.stdout
         print(f"\n{output}")
         os.remove(slim_model_file)
+        slim_data_file = model_file.replace(".onnx", "_slim.onnx.data")
+        if os.path.exists(slim_data_file):
+            os.remove(slim_data_file)
 
 
 if __name__ == "__main__":
