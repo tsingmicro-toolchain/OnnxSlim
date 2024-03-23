@@ -30,6 +30,7 @@ For more usage, see onnxslim -h or refer to our [examples](./examples)
 > * [Polygraphy](https://github.com/NVIDIA/TensorRT/tree/main/tools/Polygraphy/polygraphy)
 > * [onnx-simplifier](https://github.com/daquexian/onnx-simplifier)
 > * [tabulate](https://github.com/astanin/python-tabulate)
+> * [onnxruntime](https://github.com/microsoft/onnxruntime)
 
 # Contact
 Discord: https://discord.gg/nRw2Fd3VUS  

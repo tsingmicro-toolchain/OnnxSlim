@@ -343,6 +343,9 @@ def find_slice_nodes(node, opset):
                         new_axes = first_slice_node_axes + second_slice_node_axes
                         new_steps = first_slice_node_steps + second_slice_node_steps
 
+                        if len(new_axes) != len(set(new_axes)):
+                            continue
+
                         inputs = []
                         inputs.append(list(first_slice_node.inputs)[0])
                         inputs.append(

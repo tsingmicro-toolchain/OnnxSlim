@@ -6,7 +6,6 @@ from typing import Dict, List
 
 import numpy as np
 import onnx
-import onnxruntime.tools.symbolic_shape_infer as onnxrt_symbolic_shape_inference
 from onnx import checker
 
 import onnxslim.onnx_graphsurgeon as gs
@@ -25,6 +24,7 @@ from ..utils.utils import (
 )
 
 from .optimizer import delete_node, optimize_model
+from .symbolic_shape_infer import SymbolicShapeInference
 
 DEBUG = bool(os.getenv("ONNXSLIM_DEBUG"))
 
@@ -224,10 +224,10 @@ def check_onnx(model: onnx.ModelProto):
 def shape_infer(model: onnx.ModelProto):
     logger.debug("Start shape inference.")
     try:
-        model = onnxrt_symbolic_shape_inference.SymbolicShapeInference.infer_shapes(
-            model, auto_merge=True
-        )
+        logger.debug("try onnxruntime shape infer.")
+        model = SymbolicShapeInference.infer_shapes(model, auto_merge=True)
     except:
+        logger.debug("onnxruntime shape infer failed, try onnx shape infer.")
         if model.ByteSize() >= checker.MAXIMUM_PROTOBUF:
             tmp_dir = tempfile.TemporaryDirectory()
             tmp_path = os.path.join(tmp_dir.name, "tmp.onnx")
