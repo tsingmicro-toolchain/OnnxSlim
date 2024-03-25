@@ -214,8 +214,8 @@ def output_modification(model: onnx.ModelProto, outputs: str) -> onnx.ModelProto
     return model
 
 
-def check_onnx(model: onnx.ModelProto):
-    input_data_dict = gen_onnxruntime_input_data(model)
+def check_onnx(model: onnx.ModelProto, model_check_inputs=None):
+    input_data_dict = gen_onnxruntime_input_data(model, model_check_inputs)
     raw_onnx_output = onnxruntime_inference(model, input_data_dict)
 
     return input_data_dict, raw_onnx_output

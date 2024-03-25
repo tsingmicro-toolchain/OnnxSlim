@@ -17,6 +17,7 @@ def slim(
     inspect: bool = False,
     dump_to_disk: bool = False,
     save_as_external_data: bool = False,
+    model_check_inputs: str = None,
 ):
     """
     Slims down or optimizes an ONNX model.
@@ -111,7 +112,7 @@ def slim(
         model = output_modification(model, outputs)
 
     if model_check:
-        input_data_dict, raw_onnx_output = check_onnx(model)
+        input_data_dict, raw_onnx_output = check_onnx(model, model_check_inputs)
 
     if not no_shape_infer:
         model = shape_infer(model)
@@ -237,6 +238,15 @@ def main():
         help="split onnx as model and weight, default False.",
     )
 
+    # Model Check Inputs
+    parser.add_argument(
+        "--model_check_inputs",
+        nargs="+",
+        type=str,
+        help="Works only when model_check is enabled, Input shape of the model or numpy data path, INPUT_NAME:SHAPE or INPUT_NAME:DATAPATH, "
+        "e.g. x:1,3,224,224 or x1:1,3,224,224 x2:data.npy. Useful when input shapes are dynamic.",
+    )
+
     args, unknown = parser.parse_known_args()
 
     if unknown:
@@ -262,6 +272,7 @@ def main():
         args.inspect,
         args.dump_to_disk,
         args.save_as_external_data,
+        args.model_check_inputs,
     )
 
     return 0
