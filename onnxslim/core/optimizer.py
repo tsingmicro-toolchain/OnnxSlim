@@ -681,7 +681,7 @@ def find_matmul_add_nodes(node, opset):
     return match
 
 
-@register_fusion_pattern("FusionGelu")
+# @register_fusion_pattern("FusionGelu")
 def find_gelu_nodes(node, opset):
     # fmt: off
     '''

@@ -27,6 +27,11 @@ from .optimizer import delete_node, optimize_model
 from .symbolic_shape_infer import SymbolicShapeInference
 
 DEBUG = bool(os.getenv("ONNXSLIM_DEBUG"))
+AUTO_MERGE = (
+    True
+    if os.getenv("ONNXSLIM_AUTO_MERGE") is None
+    else bool(int(os.getenv("ONNXSLIM_AUTO_MERGE")))
+)
 
 
 def init_logging(log_level: int = 1):
@@ -225,7 +230,7 @@ def shape_infer(model: onnx.ModelProto):
     logger.debug("Start shape inference.")
     try:
         logger.debug("try onnxruntime shape infer.")
-        model = SymbolicShapeInference.infer_shapes(model, auto_merge=True)
+        model = SymbolicShapeInference.infer_shapes(model, auto_merge=AUTO_MERGE)
     except:
         logger.debug("onnxruntime shape infer failed, try onnx shape infer.")
         if model.ByteSize() >= checker.MAXIMUM_PROTOBUF:
