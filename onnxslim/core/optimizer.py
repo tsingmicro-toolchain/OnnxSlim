@@ -260,7 +260,10 @@ def find_conv_transpose_nodes(node, opset):
                 inputs = []
                 inputs.append(list(conv_transpose_node.inputs)[0])
                 weight_name = list(conv_transpose_node.inputs)[1].name
-                bias_name = ".".join(weight_name.split(".")[:-1] + ["bias"])
+                if weight_name.endswith("weight"):
+                    bias_name = weight_name[:-6] + "bias"
+                else:
+                    bias_name = weight_name + "_bias"
                 inputs.append(gs.Constant(weight_name, values=conv_w))
                 inputs.append(gs.Constant(bias_name, values=conv_b))
                 outputs = list(bn_node.outputs)
