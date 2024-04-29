@@ -3,6 +3,7 @@
 OnnxSlim can help you slim your onnx model, with less operators, but same accuracy, better inference speed.
 
 - 🚀 OnnxSlim is merged to [mnn-llm](https://github.com/wangzhaode/mnn-llm), performance increased by 5%
+- 🚀 Rank 1st in the [AICAS 2024 LLM inference optimiztion challenge](https://tianchi.aliyun.com/competition/entrance/532170/customize440) held by Arm and T-head
 
 
 # Installation
