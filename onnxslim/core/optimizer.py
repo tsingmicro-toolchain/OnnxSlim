@@ -116,18 +116,23 @@ def graph_constant_fold_inplace(graph):
             if inp_dtype == node.attrs["to"]:
                 delete_node(node)
         elif node.op == "Reshape":
-            node_output_shape = node.outputs[0].shape
-            if node_output_shape and check_shape(node_output_shape):
-                shapes = [
-                    shape if isinstance(shape, int) else -1
-                    for shape in node_output_shape
-                ]
-                reshape_const = gs.Constant(
-                    node.inputs[1].name + "_",
-                    values=np.array(shapes, dtype=np.int64),
-                )
-                node.inputs.pop(1)
-                node.inputs.insert(1, reshape_const)
+            if (node.inputs[0].shape and len(node.inputs[0].shape) == 1) and (
+                node.outputs[0].shape and len(node.outputs[0].shape) == 1
+            ):
+                delete_node(node)
+            else:
+                node_output_shape = node.outputs[0].shape
+                if node_output_shape and check_shape(node_output_shape):
+                    shapes = [
+                        shape if isinstance(shape, int) else -1
+                        for shape in node_output_shape
+                    ]
+                    reshape_const = gs.Constant(
+                        node.inputs[1].name + "_",
+                        values=np.array(shapes, dtype=np.int64),
+                    )
+                    node.inputs.pop(1)
+                    node.inputs.insert(1, reshape_const)
         elif node.op == "Mul":
             if (
                 isinstance(node.inputs[1], Constant)

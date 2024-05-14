@@ -51,6 +51,7 @@ def slim(
         onnx.ModelProto/None: If `output_model` is None, return slimmed model else return None.
     """
     import os
+    import time
     from pathlib import Path
 
     from onnxslim.core.slim import (
@@ -91,6 +92,8 @@ def slim(
         model_name = "ONNX_Model"
 
     freeze(model)
+
+    start_time = time.time()
 
     if save_as_external_data:
         model_save_as_external_data(model, output_model)
@@ -147,10 +150,13 @@ def slim(
         if slimmed_info["model_size"] >= onnx.checker.MAXIMUM_PROTOBUF:
             model_size = model.ByteSize()
             slimmed_info["model_size"] = [model_size, slimmed_info["model_size"]]
+        end_time = time.time()
+        elapsed_time = end_time - start_time
 
         print_model_info_as_table(
             model_name,
             [float_info, slimmed_info],
+            elapsed_time,
         )
 
 
