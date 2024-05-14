@@ -111,7 +111,9 @@ def onnxruntime_inference(
     return onnx_output
 
 
-def print_model_info_as_table(model_name: str, model_info_list: List[Dict]):
+def print_model_info_as_table(
+    model_name: str, model_info_list: List[Dict], elapsed_time: float = 0.0
+):
     assert (
         len(model_info_list) > 0
     ), "model_info_list must contain more than one model info"
@@ -185,6 +187,8 @@ def print_model_info_as_table(model_name: str, model_info_list: List[Dict]):
         ["Model Size"]
         + [format_bytes(model_info["model_size"]) for model_info in model_info_list]
     )
+    final_op_info.append([SEPARATING_LINE] * (len(model_info_list) + 1))
+    final_op_info.append(["Elapsed Time"] + [f"{elapsed_time:.2f} s"])
     lines = tabulate(
         final_op_info,
         headers=[],
@@ -192,6 +196,14 @@ def print_model_info_as_table(model_name: str, model_info_list: List[Dict]):
         maxcolwidths=[None] + [40] * len(model_info_list),
     ).split("\n")
 
+    time_row = lines[-2].split("|")
+    time_row[-3] = (
+        time_row[-2][: len(time_row[-2]) // 2 + 1]
+        + time_row[-3]
+        + time_row[-2][len(time_row[-2]) // 2 :]
+    )
+    time_row.pop(-2)
+    lines[-2] = "|".join(time_row)
     output = "\n".join([line if line != "| \x01 |" else lines[0] for line in lines])
 
     print(output)
