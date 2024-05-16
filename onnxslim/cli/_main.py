@@ -265,6 +265,9 @@ def main():
     if not args.inspect and args.dump_to_disk:
         parser.error("dump_to_disk can only be used with --inspect")
 
+    if args.save_as_external_data and args.output_model:
+        parser.error("--save_as_external_data can only be used for single model")
+
     slim(
         args.input_model,
         args.output_model,
