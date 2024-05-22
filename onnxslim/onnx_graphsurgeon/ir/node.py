@@ -1,5 +1,5 @@
 #
-# SPDX-FileCopyrightText: Copyright (c) 1993-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 1993-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,15 +15,31 @@
 # limitations under the License.
 #
 
-from collections import OrderedDict
-from typing import Dict, List
+from onnxslim.onnx_graphsurgeon.logger import G_LOGGER
+from onnxslim.onnx_graphsurgeon.ir.tensor import Tensor
+from onnxslim.onnx_graphsurgeon.util import misc
 
-from ..logger.logger import G_LOGGER
-from ..util import misc
-from .tensor import Tensor
+from collections import OrderedDict
+from dataclasses import dataclass
+from typing import List, Dict
 
 
 class Node(object):
+
+    @dataclass
+    class AttributeRef:
+        """
+        An AttributeRef is an attribute value which references an attribute in the parent function.
+        A node's attribute can only be an AttributeRef if the node lives inside a Function.
+
+        Args:
+            name (str): The name of the referenced attribute in the parent Function.
+            type (type): The attribute's type.
+        """
+
+        name: str
+        type: type
+
     def __init__(
         self,
         op: str,
@@ -95,6 +111,33 @@ class Node(object):
         """
         return self.outputs[tensor_idx].outputs[consumer_idx]
 
+    def subgraphs(self, recursive=False):
+        """
+        Convenience function to iterate over all subgraphs which are contained in this node.
+        Node subgraphs are found in attributes of ONNX control flow nodes such as 'If' and 'Loop'.
+
+        Args:
+            recursive (bool): Whether to recurse into the subgraph nodes when looking for subgraphs. Defaults to False.
+
+        Returns:
+            A generator which iterates over this node's subgraphs.
+        """
+        from onnxslim.onnx_graphsurgeon.ir.graph import Graph
+
+        visit_queue = [self]
+
+        # This prevents infinite recursion in the (illegal) case of cyclical graphs.
+        visited = set()
+
+        while visit_queue:
+            node = visit_queue.pop()
+            for attr in node.attrs.values():
+                if isinstance(attr, Graph) and id(attr) not in visited:
+                    visited.add(id(attr))
+                    if recursive:
+                        visit_queue.extend(attr.nodes)
+                    yield attr
+
     def __setattr__(self, name, value):
         if name in ["inputs", "outputs"]:
             try:
@@ -122,7 +165,7 @@ class Node(object):
 
         Note: Generally, you should only ever make a copy of a Graph.
         """
-        from ..ir.graph import Graph
+        from onnxslim.onnx_graphsurgeon.ir.graph import Graph
 
         new_attrs = OrderedDict()
         for name, attr in self.attrs.items():
@@ -169,18 +212,6 @@ class Node(object):
         Check whether two nodes are equal by comparing name, attributes, op, inputs, and outputs.
         """
         G_LOGGER.verbose("Comparing node: {:} with {:}".format(self.name, other.name))
-
-        def sequences_equal(seq1, seq2):
-            length_match = len(seq1) == len(seq2)
-            if not length_match:
-                return False
-
-            for elem1, elem2 in zip(seq1, seq2):
-                if elem1 != elem2:
-                    return False
-
-            return True
-
         attrs_match = (
             self.name == other.name
             and self.op == other.op
@@ -189,11 +220,11 @@ class Node(object):
         if not attrs_match:
             return False
 
-        inputs_match = sequences_equal(self.inputs, other.inputs)
+        inputs_match = misc.sequences_equal(self.inputs, other.inputs)
         if not inputs_match:
             return False
 
-        outputs_match = sequences_equal(self.outputs, other.outputs)
+        outputs_match = misc.sequences_equal(self.outputs, other.outputs)
         if not outputs_match:
             return False
 

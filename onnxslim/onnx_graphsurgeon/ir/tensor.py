@@ -1,5 +1,5 @@
 #
-# SPDX-FileCopyrightText: Copyright (c) 1993-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 1993-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,12 +15,11 @@
 # limitations under the License.
 #
 
-from typing import Sequence, Union
+from onnxslim.onnx_graphsurgeon.logger import G_LOGGER
+from onnxslim.onnx_graphsurgeon.util import misc
 
+from typing import Set, Sequence, Union
 import numpy as np
-
-from ..logger.logger import G_LOGGER
-from ..util import misc
 
 
 class Tensor(object):
@@ -62,7 +61,12 @@ class Tensor(object):
         """
         return self.name == ""
 
-    def to_constant(self, values: np.ndarray, data_location: int = None):
+    def to_constant(
+        self,
+        values: np.ndarray,
+        data_location: int = None,
+        export_dtype: Union[np.dtype, "onnx.TensorProto.DataType"] = None,
+    ):
         """
         Modifies this tensor in-place to convert it to a Constant. This means that all consumers/producers of the tensor will see the update.
 
@@ -73,30 +77,39 @@ class Tensor(object):
                     An enum value indicating the location where the tensor data is stored.
                     Generally, this will come from onnx.TensorProto.DataLocation.
 
+            dtype (Union[numpy.dtype, onnx.TensorProto.DataType]): The data type of the tensor.
         Returns:
             self
         """
         self.__class__ = Constant
         self._values = values
         self.data_location = data_location
+        self.export_dtype = export_dtype
+
         return self
 
     def to_variable(
-        self, dtype: np.dtype = None, shape: Sequence[Union[int, str]] = []
+        self,
+        dtype: Union[np.dtype, "onnx.TensorProto.DataType"] = None,
+        shape: Sequence[Union[int, str]] = [],
     ):
         """
         Modifies this tensor in-place to convert it to a Variable. This means that all consumers/producers of the tensor will see the update.
 
         Args:
-            dtype (np.dtype): The data type of the tensor.
+            dtype (Union[numpy.dtype, onnx.TensorProto.DataType]): The data type of the tensor.
             shape (Sequence[int]): The shape of the tensor.
 
         Returns:
             self
         """
+
+        variable_dtype = dtype if dtype is not None else self.export_dtype
+
         self.__class__ = Variable
-        self.dtype = dtype
         self.shape = shape
+        self.dtype = variable_dtype
+
         return self
 
     def i(self, tensor_idx=0, producer_idx=0):
@@ -163,7 +176,7 @@ class Variable(Tensor):
     def __init__(
         self,
         name: str,
-        dtype: np.dtype = None,
+        dtype: Union[np.dtype, "onnx.TensorProto.DataType"] = None,
         shape: Sequence[Union[int, str]] = None,
         type: str = "tensor_type",
     ):
@@ -172,7 +185,7 @@ class Variable(Tensor):
 
         Args:
             name (str): The name of the tensor.
-            dtype (numpy.dtype): The data type of the tensor.
+            dtype (Union[numpy.dtype, onnx.TensorProto.DataType]): The data type of the tensor.
             shape (Sequence[Union[int, str]]): The shape of the tensor. This may contain strings if the model uses dimension parameters.
             type (str): The type of the tensor.
         """
@@ -183,10 +196,11 @@ class Variable(Tensor):
         self.shape = misc.default_value(shape, None)
         self.type = type
 
-    def to_constant(self, values: np.ndarray):
+    def to_constant(self, values: np.ndarray, export_dtype: Union[np.dtype, "onnx.TensorProto.DataType"] = None):
         del self.dtype
         del self.shape
-        return super().to_constant(values)
+
+        return super().to_constant(values, export_dtype=export_dtype)
 
     def copy(self):
         """
@@ -194,7 +208,7 @@ class Variable(Tensor):
 
         Note: Generally, you should only ever make a copy of a Graph.
         """
-        return Variable(self.name, self.dtype, self.shape, self.type)
+        return Variable(self.name, self.dtype, self.shape)
 
     def __eq__(self, other):
         """
@@ -239,17 +253,18 @@ class LazyValues(object):
     def __init__(self, tensor):
         """
         Args:
-            tensor (onnx.TensorProto): The ONNX tensor that this instance should lazily load.
+            tensor (onnx.TensorProto, onnx.SparseTensorProto): The ONNX tensor that this instance should lazily load.
         """
-        from ..importers.onnx_importer import (
-            get_onnx_tensor_dtype,
+        from onnxslim.onnx_graphsurgeon.importers.onnx_importer import (
             get_onnx_tensor_shape,
+            get_onnx_tensor_dtype,
+            get_itemsize,
         )
 
         self.tensor = tensor
         self.shape = get_onnx_tensor_shape(self.tensor)
         self.dtype = get_onnx_tensor_dtype(self.tensor)
-        self.nbytes = misc.volume(self.shape) * self.dtype.itemsize
+        self.nbytes = misc.volume(self.shape) * get_itemsize(self.dtype)
 
     def load(self):
         """
@@ -260,6 +275,18 @@ class LazyValues(object):
         """
         import onnx
         import onnx.numpy_helper
+        from onnxslim.onnx_graphsurgeon.importers.onnx_importer import (
+            get_dtype_name,
+            get_numpy_type,
+        )
+
+        if get_numpy_type(self.dtype) is None:
+            G_LOGGER.warning(
+                f"Datatype: {get_dtype_name(self.dtype)} could not be converted to a NumPy type.\n"
+                f"Accessing the values of this constant tensor ({self.tensor.name}) will cause them to be casted to a supported data type. "
+                f"This means that the weights will have a different type than the original model when they are exported again!\n"
+                f"If this is not what you intended, please avoid accessing the values of this constant tensor."
+            )
 
         return np.array(onnx.numpy_helper.to_array(self.tensor))
 
@@ -283,12 +310,72 @@ class LazyValues(object):
         return tensor_match and shape_match and dtype_match
 
 
+class SparseValues(LazyValues):
+    """
+    A special object that represents constant tensor values that is sparse
+    """
+
+    def load(self):
+        """
+        Load a numpy array from the sparse structure.
+
+        Returns:
+            np.array: A numpy array containing the values of the tensor.
+        """
+        import onnx
+        import onnx.numpy_helper
+        from onnxslim.onnx_graphsurgeon.importers.onnx_importer import (
+            get_dtype_name,
+            get_numpy_type,
+        )
+
+        supported_index_type = [onnx.TensorProto.INT64]
+        if self.tensor.indices.data_type not in supported_index_type:
+            G_LOGGER.critical(
+                f"Unsupported index data type {self.tensor.indices.data_type} in {self.tensor.values.name}"
+            )
+
+        if self.tensor.values.data_type == onnx.TensorProto.FLOAT16:
+            values_data = np.asarray(
+                self.tensor.values.int32_data, dtype=np.uint16
+            ).view(np.float16)
+        else:
+            field_name = onnx.helper.tensor_dtype_to_field(self.tensor.values.data_type)
+            values = getattr(self.tensor.values, field_name)
+            dtype = onnx.helper.tensor_dtype_to_np_dtype(self.tensor.values.data_type)
+            values_data = np.asarray(values, dtype)
+        indices_data = self.tensor.indices.int64_data
+
+        if len(self.tensor.indices.dims) == 1:
+            values = np.zeros(np.prod(self.tensor.dims))
+            # [NNZ] layout, in which case the i-th value must be the linearized-index of the i-th value.
+            values[indices_data] = values_data
+            values = values.reshape(self.tensor.dims)
+        elif len(self.tensor.indices.dims) == 2:
+            # [NNZ, rank] with the [i,j]-th value corresponding to the j-th index of the i-th value
+            values = np.zeros(self.tensor.dims)
+            indices_data = np.asarray(indices_data).reshape(self.tensor.indices.dims)
+
+            for i in range(len(values_data)):
+                values[tuple(indices_data[i])] = values_data[i]
+        else:
+            G_LOGGER.critical(
+                f"Unsupported index data dims {self.tensor.indices.dims} in {self.tensor.values.name}"
+            )
+
+        return values
+
+    def __str__(self):
+        return "SparseValues (shape={:}, dtype={:})".format(self.shape, self.dtype)
+
+
 class Constant(Tensor):
     def __init__(
         self,
         name: str,
         values: Union[np.ndarray, LazyValues],
         data_location: int = None,
+        export_dtype: Union[np.dtype, "onnx.TensorProto.DataType"] = None,
     ):
         """
         Represents a Tensor whose value is known.
@@ -300,24 +387,41 @@ class Constant(Tensor):
             data_location (int):
                     An enum value indicating the location where the tensor data is stored.
                     Generally, this will come from onnx.TensorProto.DataLocation.
+
+
+            export_dtype (Union[np.dtype, onnx.TensorProto.DataType]):
+                    The data type of the tensor when exported to onnx. If not specified, then
+                    the data type of values will be used.
         """
         self.name = name
         self.inputs = misc.SynchronizedList(self, field_name="outputs", initial=[])
         self.outputs = misc.SynchronizedList(self, field_name="inputs", initial=[])
-        if not isinstance(values, np.ndarray) and not isinstance(values, LazyValues):
+        if (
+            not isinstance(values, np.ndarray)
+            and not isinstance(values, LazyValues)
+            and not isinstance(values, SparseValues)
+        ):
             G_LOGGER.critical(
-                "Provided `values` argument is not a NumPy array or a LazyValues instance. "
-                "Please provide a NumPy array or LazyValues instance to construct a Constant. "
-                "Note: Provided `values` parameter was: {:}".format(values)
+                "Provided `values` argument is not a NumPy array, a LazyValues instance or a"
+                "SparseValues instance. Please provide a NumPy array or LazyValues instance "
+                "to construct a Constant. Note: Provided `values` parameter was: {:}".format(
+                    values
+                )
             )
         self._values = values
         self.data_location = data_location
+        self._export_dtype = export_dtype
 
-    def to_variable(
-        self, dtype: np.dtype = None, shape: Sequence[Union[int, str]] = []
-    ):
+    def to_variable(self, dtype: np.dtype = None, shape: Sequence[Union[int, str]] = []):
+        var_dtype = self.export_dtype
+
+        del self._export_dtype
         del self._values
-        return super().to_variable(dtype, shape)
+
+        if dtype is not None:
+            return super().to_variable(dtype, shape)
+
+        return super().to_variable(var_dtype, shape)
 
     def copy(self):
         """
@@ -325,7 +429,7 @@ class Constant(Tensor):
 
         Note: Generally, you should only ever make a copy of a Graph.
         """
-        return Constant(self.name, self._values)
+        return Constant(self.name, self._values, export_dtype=self.export_dtype)
 
     @property
     def values(self):
@@ -344,7 +448,18 @@ class Constant(Tensor):
 
     @property
     def dtype(self):
-        return self._values.dtype.type
+        return self._values.dtype
+
+    @property
+    def export_dtype(self):
+        if self._export_dtype is not None:
+            return self._export_dtype
+
+        return self.dtype
+
+    @export_dtype.setter
+    def export_dtype(self, export_dtype):
+        self._export_dtype = export_dtype
 
     def __repr__(self):  # Hack to make logging output pretty.
         ret = self.__str__()

@@ -1,5 +1,5 @@
 #
-# SPDX-FileCopyrightText: Copyright (c) 1993-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 1993-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,10 @@
 
 from collections import OrderedDict
 from typing import List, Sequence
+
+import numpy as np
+from onnx import AttributeProto
+from onnxslim.onnx_graphsurgeon.logger import G_LOGGER
 
 
 # default_value exists to solve issues that might result from Python's normal default argument behavior.
@@ -74,6 +78,56 @@ def volume(obj):
     for elem in obj:
         vol *= elem
     return vol
+
+
+_ONNX_ATTR_TYPE_TO_GS_TYPE = {}
+_GS_TYPE_TO_ONNX_ATTR_TYPE = {}
+
+
+# This method prevents circular import of Tensor and Graph
+def _init_dicts():
+    global _ONNX_ATTR_TYPE_TO_GS_TYPE
+    global _GS_TYPE_TO_ONNX_ATTR_TYPE
+    if _ONNX_ATTR_TYPE_TO_GS_TYPE and _GS_TYPE_TO_ONNX_ATTR_TYPE:
+        return
+
+    from onnxslim.onnx_graphsurgeon.ir.graph import Graph
+    from onnxslim.onnx_graphsurgeon.ir.tensor import Tensor
+
+    _ONNX_ATTR_TYPE_TO_GS_TYPE = {
+        AttributeProto.UNDEFINED: None,
+        AttributeProto.FLOAT: float,
+        AttributeProto.INT: int,
+        AttributeProto.STRING: str,
+        AttributeProto.TENSOR: Tensor,
+        AttributeProto.GRAPH: Graph,
+        AttributeProto.SPARSE_TENSOR: AttributeProto.SPARSE_TENSOR,
+        AttributeProto.TYPE_PROTO: AttributeProto.TYPE_PROTO,
+        AttributeProto.FLOATS: List[float],
+        AttributeProto.INTS: List[int],
+        AttributeProto.STRINGS: List[str],
+        AttributeProto.TENSORS: List[Tensor],
+        AttributeProto.GRAPHS: List[Graph],
+        AttributeProto.SPARSE_TENSORS: AttributeProto.SPARSE_TENSORS,
+        AttributeProto.TYPE_PROTOS: AttributeProto.TYPE_PROTOS,
+    }
+    _GS_TYPE_TO_ONNX_ATTR_TYPE = {v: k for k, v in _ONNX_ATTR_TYPE_TO_GS_TYPE.items()}
+
+
+def convert_from_onnx_attr_type(onnx_attr_type):
+    _init_dicts()
+    return _ONNX_ATTR_TYPE_TO_GS_TYPE[onnx_attr_type]
+
+
+def convert_to_onnx_attr_type(any_type):
+    _init_dicts()
+    if any_type in _GS_TYPE_TO_ONNX_ATTR_TYPE:
+        return _GS_TYPE_TO_ONNX_ATTR_TYPE[any_type]
+    if np.issubdtype(any_type, np.floating):
+        return AttributeProto.FLOAT
+    if np.issubdtype(any_type, np.integer):
+        return AttributeProto.INT
+    G_LOGGER.warning(f"Unable to convert {any_type} into an ONNX AttributeType")
 
 
 # Special type of list that synchronizes contents with another list.
@@ -138,3 +192,21 @@ class SynchronizedList(list):
     def __iadd__(self, other_list: List[object]):
         self.extend(other_list)
         return self
+
+    def __copy__(self):
+        return list(self)
+
+    def __deepcopy__(self, memo):
+        return list(self)
+
+
+def sequences_equal(seq1, seq2):
+    length_match = len(seq1) == len(seq2)
+    if not length_match:
+        return False
+
+    for elem1, elem2 in zip(seq1, seq2):
+        if elem1 != elem2:
+            return False
+
+    return True

@@ -1,1 +1,1 @@
-from .base_exporter import BaseExporter
+from onnxslim.onnx_graphsurgeon.exporters.base_exporter import BaseExporter
