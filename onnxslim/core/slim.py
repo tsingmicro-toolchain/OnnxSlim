@@ -34,20 +34,17 @@ AUTO_MERGE = (
 )
 
 
-def init_logging(log_level: int = 1):
+def init_logging(verbose=False):
     logger.remove()
-    if log_level == 0 or DEBUG:  # DEBUG
+    if verbose:  # DEBUG
         logger.add(sys.stderr, level=G_LOGGER.DEBUG)
-    elif log_level == 1:  # INFO
-        logger.add(sys.stderr, level=G_LOGGER.INFO)
-    elif log_level == 2:  # WARNING
-        logger.add(sys.stderr, level=G_LOGGER.WARNING)
-    elif log_level == 3:  # ERROR
+        G_LOGGER.severity = G_LOGGER.DEBUG
+    else:  # INFO
         logger.add(sys.stderr, level=G_LOGGER.ERROR)
-    else:
-        raise Exception("level must be 0, 1, 2 or 3")
+        G_LOGGER.severity = G_LOGGER.ERROR
 
-    G_LOGGER.severity = G_LOGGER.ERROR
+    G_LOGGER.colors = False
+
     import onnxruntime as ort
 
     ort.set_default_logger_severity(3)

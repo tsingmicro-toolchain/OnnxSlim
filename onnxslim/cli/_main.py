@@ -18,6 +18,7 @@ def slim(
     dump_to_disk: bool = False,
     save_as_external_data: bool = False,
     model_check_inputs: str = None,
+    verbose: bool = False,
 ):
     """
     Slims down or optimizes an ONNX model.
@@ -46,6 +47,10 @@ def slim(
         dump_to_disk (bool, optional): Flag indicating whether to dump the model detail to disk. Default is False.
 
         save_as_external_data (bool, optional): Flag indicating whether to split onnx as model and weight. Default is False.
+
+        model_check_inputs (str, optional): The shape or tensor used for model check. Default is None.
+
+        verbose (bool, optional): Flag indicating whether to print verbose logs. Default is False.
 
     Returns:
         onnx.ModelProto/None: If `output_model` is None, return slimmed model else return None.
@@ -76,7 +81,7 @@ def slim(
         print_model_info_as_table,
     )
 
-    init_logging(1)
+    init_logging(verbose)
 
     MAX_ITER = (
         10
@@ -253,6 +258,11 @@ def main():
         "e.g. x:1,3,224,224 or x1:1,3,224,224 x2:data.npy. Useful when input shapes are dynamic.",
     )
 
+    # Verbose
+    parser.add_argument(
+        "--verbose", action="store_true", help="verbose mode, default False."
+    )
+
     args, unknown = parser.parse_known_args()
 
     if unknown:
@@ -282,6 +292,7 @@ def main():
         args.dump_to_disk,
         args.save_as_external_data,
         args.model_check_inputs,
+        args.verbose,
     )
 
     return 0
