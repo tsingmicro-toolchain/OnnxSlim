@@ -15,11 +15,12 @@
 # limitations under the License.
 #
 
+from typing import Sequence, Union
+
+import numpy as np
+
 from onnxslim.onnx_graphsurgeon.logger import G_LOGGER
 from onnxslim.onnx_graphsurgeon.util import misc
-
-from typing import Set, Sequence, Union
-import numpy as np
 
 
 class Tensor(object):
@@ -196,7 +197,11 @@ class Variable(Tensor):
         self.shape = misc.default_value(shape, None)
         self.type = type
 
-    def to_constant(self, values: np.ndarray, export_dtype: Union[np.dtype, "onnx.TensorProto.DataType"] = None):
+    def to_constant(
+        self,
+        values: np.ndarray,
+        export_dtype: Union[np.dtype, "onnx.TensorProto.DataType"] = None,
+    ):
         del self.dtype
         del self.shape
 
@@ -256,9 +261,9 @@ class LazyValues(object):
             tensor (onnx.TensorProto, onnx.SparseTensorProto): The ONNX tensor that this instance should lazily load.
         """
         from onnxslim.onnx_graphsurgeon.importers.onnx_importer import (
-            get_onnx_tensor_shape,
-            get_onnx_tensor_dtype,
             get_itemsize,
+            get_onnx_tensor_dtype,
+            get_onnx_tensor_shape,
         )
 
         self.tensor = tensor
@@ -275,6 +280,7 @@ class LazyValues(object):
         """
         import onnx
         import onnx.numpy_helper
+
         from onnxslim.onnx_graphsurgeon.importers.onnx_importer import (
             get_dtype_name,
             get_numpy_type,
@@ -324,6 +330,7 @@ class SparseValues(LazyValues):
         """
         import onnx
         import onnx.numpy_helper
+
         from onnxslim.onnx_graphsurgeon.importers.onnx_importer import (
             get_dtype_name,
             get_numpy_type,
@@ -412,7 +419,9 @@ class Constant(Tensor):
         self.data_location = data_location
         self._export_dtype = export_dtype
 
-    def to_variable(self, dtype: np.dtype = None, shape: Sequence[Union[int, str]] = []):
+    def to_variable(
+        self, dtype: np.dtype = None, shape: Sequence[Union[int, str]] = []
+    ):
         var_dtype = self.export_dtype
 
         del self._export_dtype

@@ -17,19 +17,20 @@
 
 import copy
 from collections import OrderedDict
-from typing import List, Union, Dict, Any
+from typing import Any, List, Union
 
 import numpy as np
 import onnx
 import onnx.numpy_helper
+
 from onnxslim.onnx_graphsurgeon.importers.base_importer import BaseImporter
 from onnxslim.onnx_graphsurgeon.ir.function import Function
 from onnxslim.onnx_graphsurgeon.ir.graph import Graph
 from onnxslim.onnx_graphsurgeon.ir.node import Node
 from onnxslim.onnx_graphsurgeon.ir.tensor import (
     Constant,
-    SparseValues,
     LazyValues,
+    SparseValues,
     Tensor,
     Variable,
 )

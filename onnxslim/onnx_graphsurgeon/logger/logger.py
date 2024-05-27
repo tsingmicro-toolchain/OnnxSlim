@@ -15,13 +15,14 @@
 # limitations under the License.
 #
 
-from onnxslim.onnx_graphsurgeon.util.exception import OnnxGraphSurgeonException
+import enum
 
 import inspect
-import enum
-import time
-import sys
 import os
+import sys
+import time
+
+from onnxslim.onnx_graphsurgeon.util.exception import OnnxGraphSurgeonException
 
 
 # Context manager to apply indentation to messages

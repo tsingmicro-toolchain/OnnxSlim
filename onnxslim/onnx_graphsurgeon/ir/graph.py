@@ -17,10 +17,11 @@
 
 import copy
 import numbers
-from collections import OrderedDict, defaultdict
+from collections import defaultdict, OrderedDict
 from typing import List, Sequence
 
 import numpy as np
+
 from onnxslim.onnx_graphsurgeon.ir.node import Node
 from onnxslim.onnx_graphsurgeon.ir.tensor import Constant, Tensor, Variable
 from onnxslim.onnx_graphsurgeon.logger import G_LOGGER, LogMode
@@ -476,7 +477,7 @@ class Graph(object):
                             node.outputs.remove(out)
 
             self.nodes = nodes
-            
+
             return self
 
     def toposort(
@@ -507,7 +508,7 @@ class Graph(object):
 
         Returns:
             self
-        """      
+        """
 
         ALLOWED_MODES = ["full", "nodes", "functions"]
         if mode not in ALLOWED_MODES:
@@ -761,7 +762,10 @@ class Graph(object):
         Returns:
             self
         """
-        from onnxslim.onnx_graphsurgeon.exporters.onnx_exporter import dtype_to_onnx, export_onnx
+        from onnxslim.onnx_graphsurgeon.exporters.onnx_exporter import (
+            dtype_to_onnx,
+            export_onnx,
+        )
 
         custom_should_exclude_node = misc.default_value(
             should_exclude_node, lambda node: False

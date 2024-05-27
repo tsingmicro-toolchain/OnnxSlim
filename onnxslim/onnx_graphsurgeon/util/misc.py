@@ -20,6 +20,7 @@ from typing import List, Sequence
 
 import numpy as np
 from onnx import AttributeProto
+
 from onnxslim.onnx_graphsurgeon.logger import G_LOGGER
 
 

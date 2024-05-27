@@ -15,13 +15,13 @@
 # limitations under the License.
 #
 
-from onnxslim.onnx_graphsurgeon.logger import G_LOGGER
-from onnxslim.onnx_graphsurgeon.ir.tensor import Tensor
-from onnxslim.onnx_graphsurgeon.util import misc
-
 from collections import OrderedDict
 from dataclasses import dataclass
-from typing import List, Dict
+from typing import Dict, List
+
+from onnxslim.onnx_graphsurgeon.ir.tensor import Tensor
+from onnxslim.onnx_graphsurgeon.logger import G_LOGGER
+from onnxslim.onnx_graphsurgeon.util import misc
 
 
 class Node(object):
