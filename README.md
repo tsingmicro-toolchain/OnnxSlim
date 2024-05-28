@@ -1,5 +1,14 @@
 # OnnxSlim
 
+<p align="center">
+    <a href="https://pypi.org/project/onnxslim">
+        <img src="https://img.shields.io/pypi/dm/onnxslim?color=blue" />
+    </a>
+    <a href="https://github.com/inisis/onnxslim/actions/workflows/nightly-build.yaml">
+        <img src="https://github.com/inisis/onnxslim/actions/workflows/nightly-build.yml/badge.svg" />
+    </a>
+</p>
+
 OnnxSlim can help you slim your onnx model, with less operators, but same accuracy, better inference speed.
 
 - 🚀 OnnxSlim is merged to [mnn-llm](https://github.com/wangzhaode/mnn-llm), performance increased by 5%
