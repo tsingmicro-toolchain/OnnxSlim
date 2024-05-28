@@ -157,6 +157,11 @@ def graph_constant_fold_inplace(graph):
                 if np.all(constant_variable.values == 0):
                     idx = 0 if idx == 1 else 1
                     delete_node(node, idx)
+        elif node.op == "Expand":
+            if len(node.inputs) > 1 and isinstance(node.inputs[1], Constant):
+                if np.all(node.inputs[1].values == 1):
+                    idx = 0 if idx == 1 else 1
+                    delete_node(node, idx)
 
 
 @register_fusion_pattern("FusionPadConv")
