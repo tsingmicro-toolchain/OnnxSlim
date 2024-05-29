@@ -20,4 +20,3 @@ class OnnxGraphSurgeonException(Exception):
     """
     An exception raised by ONNX-GraphSurgeon.
     """
-
