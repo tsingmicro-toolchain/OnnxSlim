@@ -1,4 +1,5 @@
 import logging
+
 import os
 import sys
 import tempfile
@@ -12,15 +13,12 @@ import onnxslim.onnx_graphsurgeon as gs
 from onnxslim.onnx_graphsurgeon.ir.tensor import Constant
 from onnxslim.onnx_graphsurgeon.logger.logger import G_LOGGER
 
-logging.basicConfig(level=logging.ERROR)
-
-from loguru import logger
-
 from ..utils.utils import (
     dump_model_info_to_disk,
     gen_onnxruntime_input_data,
     onnxruntime_inference,
     print_model_info_as_table,
+    logger
 )
 
 from .optimizer import delete_node, optimize_model
@@ -35,13 +33,20 @@ AUTO_MERGE = (
 
 
 def init_logging(verbose=False):
-    logger.remove()
+    # Remove all handlers associated with the root logger object.
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+
     if verbose:  # DEBUG
-        logger.add(sys.stderr, level=G_LOGGER.DEBUG)
-        G_LOGGER.severity = G_LOGGER.DEBUG
-    else:  # INFO
-        logger.add(sys.stderr, level=G_LOGGER.ERROR)
-        G_LOGGER.severity = G_LOGGER.ERROR
+        logging.basicConfig(level=logging.DEBUG,
+                            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                            handlers=[logging.StreamHandler(sys.stderr)])
+        G_LOGGER.severity = logging.DEBUG
+    else:  # ERROR
+        logging.basicConfig(level=logging.ERROR,
+                            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                            handlers=[logging.StreamHandler(sys.stderr)])
+        G_LOGGER.severity = logging.ERROR
 
     G_LOGGER.colors = False
 
