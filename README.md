@@ -2,6 +2,9 @@
 
 <p align="center">
     <a href="https://pypi.org/project/onnxslim">
+        <img src="https://badgen.net/pypi/v/onnxslim?color=blue" />
+    </a>
+    <a href="https://pypi.org/project/onnxslim">
         <img src="https://img.shields.io/pypi/dm/onnxslim?color=blue" />
     </a>
     <a href="https://github.com/inisis/onnxslim/actions/workflows/nightly-build.yaml">
@@ -36,7 +39,7 @@ pip install .
 onnxslim your_onnx_model slimmed_onnx_model
 ```
 
-<div align=left><img src="images/onnxslim.gif"></div>
+<div align=left><img src="https://raw.githubusercontent.com/inisis/onnxslim/main/images/onnxslim.gif"></div>
 
 For more usage, see onnxslim -h or refer to our [examples](./examples)
 
