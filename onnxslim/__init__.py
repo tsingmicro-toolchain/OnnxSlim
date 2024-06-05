@@ -1,9 +1,9 @@
 import os
 import warnings
 
-from .cli import slim
-from .core.optimizer import DEFAULT_FUSION_PATTERNS
-from .version import __version__
+from onnxslim.cli import slim
+from onnxslim.core.optimizer import DEFAULT_FUSION_PATTERNS
+from onnxslim.version import __version__
 
 if os.path.dirname(os.path.realpath(__file__)) == os.path.join(os.path.realpath(os.getcwd()), "onnxslim"):
     message = (

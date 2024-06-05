@@ -2,7 +2,7 @@ from typing import Union
 
 import onnx
 
-from onnxslim.utils.utils import logger
+from onnxslim.utils import logger
 
 
 def slim(
@@ -61,25 +61,25 @@ def slim(
     from pathlib import Path
 
     from onnxslim.core.slim import (
-        check_onnx,
-        check_point,
-        check_result,
         convert_data_format,
-        freeze,
-        init_logging,
         input_shape_modification,
-        model_save_as_external_data,
-        optimize,
         output_modification,
-        save,
         shape_infer,
-        summarize_model,
+        optimize,
+        freeze,
     )
 
-    from ..utils.utils import (
+    from onnxslim.utils import (
         dump_model_info_to_disk,
         onnxruntime_inference,
         print_model_info_as_table,
+        model_save_as_external_data,
+        summarize_model,
+        init_logging,
+        check_result,
+        check_onnx,
+        check_point,
+        save,
     )
 
     init_logging(verbose)
