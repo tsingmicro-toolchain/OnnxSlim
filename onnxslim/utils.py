@@ -2,6 +2,7 @@ import os
 import sys
 import logging
 from typing import Dict, List, Optional, Tuple, Union
+from collections import defaultdict
 
 import numpy as np
 import onnx
@@ -284,7 +285,7 @@ def summarize_model(model: onnx.ModelProto) -> Dict:
     model_info["model_size"] = model_size
 
     op_info = {}
-    op_type_counts = {}
+    op_type_counts = defaultdict(int)
 
     def get_tensor_dtype_shape(tensor):
         """Extract the data type and shape of an ONNX tensor."""
@@ -317,10 +318,7 @@ def summarize_model(model: onnx.ModelProto) -> Dict:
 
     for node in model.graph.node:
         op_type = node.op_type
-        if op_type in op_type_counts:
-            op_type_counts[op_type] += 1
-        else:
-            op_type_counts[op_type] = 1
+        op_type_counts[op_type] += 1
 
         for output in node.output:
             shapes = []
