@@ -316,18 +316,27 @@ def summarize_model(model: onnx.ModelProto) -> Dict:
 
     value_info_dict = {value_info.name: value_info for value_info in model.graph.value_info}
 
-    for node in model.graph.node:
-        op_type = node.op_type
-        op_type_counts[op_type] += 1
+    def get_graph_node_info(graph: onnx.GraphProto) -> Dict[str, List[str]]:
+        for node in graph.node:
+            op_type = node.op_type
+            op_type_counts[op_type] += 1
+            for output in node.output:
+                shapes = []
+                if output in value_info_dict:
+                    tensor = value_info_dict[output]
+                    type_str, shape = get_tensor_dtype_shape(tensor)
+                    shapes.append([type_str, shape])
 
-        for output in node.output:
-            shapes = []
-            if output in value_info_dict:
-                tensor = value_info_dict[output]
-                type_str, shape = get_tensor_dtype_shape(tensor)
-                shapes.append([type_str, shape])
+            op_info[node.name] = [node.op_type, shapes]
 
-        op_info[node.name] = [node.op_type, shapes]
+            for attr in node.attribute:
+                ATTR_TYPE_MAPPING = {v: k for k, v in onnx.AttributeProto.AttributeType.items()}
+                if attr.type in ATTR_TYPE_MAPPING:
+                    attr_str = ATTR_TYPE_MAPPING[attr.type]
+                    if attr_str == "GRAPH":
+                        get_graph_node_info(attr.g)
+
+    get_graph_node_info(model.graph)
 
     model_info["op_set"] = str(get_opset(model))
     model_info["op_info"] = op_info

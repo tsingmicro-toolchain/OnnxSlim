@@ -108,6 +108,9 @@ def graph_constant_fold_inplace(graph):
     """Perform in-place constant folding optimizations on the given computational graph by eliminating redundant
     nodes.
     """
+    for subgraph in graph.subgraphs():
+        graph_constant_fold_inplace(subgraph)
+
     for node in graph.nodes:
         if node.op == "Identity" or node.op == "Dropout":
             delete_node(node)
