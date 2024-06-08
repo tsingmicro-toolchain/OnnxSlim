@@ -439,3 +439,44 @@ def check_result(raw_onnx_output, slimmed_onnx_output):
                 logger.warning("Model output mismatch after slimming.")
                 logger.warning("Please check the model carefully.")
                 return
+
+
+data_type_sizes = {
+    onnx.TensorProto.FLOAT: 4,
+    onnx.TensorProto.DOUBLE: 8,
+    onnx.TensorProto.INT32: 4,
+    onnx.TensorProto.INT64: 8,
+    onnx.TensorProto.UINT8: 1,
+    onnx.TensorProto.INT8: 1,
+    onnx.TensorProto.UINT16: 2,
+    onnx.TensorProto.INT16: 2,
+    onnx.TensorProto.BOOL: 1,
+}
+
+
+def calculate_tensor_size(tensor):
+    shape = tensor.dims
+    num_elements = np.prod(shape) if shape else 0
+    element_size = data_type_sizes.get(tensor.data_type, 0)
+    return num_elements * element_size
+
+
+def get_model_size_and_initializer_size(model):
+    initializer_size = 0
+    for tensor in model.graph.initializer:
+        tensor_size = calculate_tensor_size(tensor)
+        initializer_size += tensor_size
+
+    print('model size', model.ByteSize())
+    print('initializer size', initializer_size)
+
+
+def get_model_subgraph_size(model):
+    graph = model.graph
+    for node in graph.node:
+        for attr in node.attribute:
+            ATTR_TYPE_MAPPING = {v: k for k, v in onnx.AttributeProto.AttributeType.items()}
+            if attr.type in ATTR_TYPE_MAPPING:
+                attr_str = ATTR_TYPE_MAPPING[attr.type]
+                if attr_str == "GRAPH":
+                    print('subgraph', attr.g.ByteSize())

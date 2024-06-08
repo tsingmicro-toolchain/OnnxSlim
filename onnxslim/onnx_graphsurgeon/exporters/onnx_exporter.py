@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+from collections import OrderedDict
 from typing import List, Sequence, Union
 
 import numpy as np
@@ -164,14 +164,14 @@ class OnnxExporter(BaseExporter):
         return onnx_tensor
 
     @staticmethod
-    def export_attributes(attrs: dict) -> List[onnx.AttributeProto]:
+    def export_attributes(attrs: dict, subgraph_tensor_map) -> List[onnx.AttributeProto]:
         onnx_attrs: List[onnx.AttributeProto] = []
         for key, val in attrs.items():
             if isinstance(val, Tensor):
                 val = OnnxExporter.export_tensor_proto(val)
             elif isinstance(val, Graph):
                 # Subgraphs don't need to have types specified for their tensors.
-                val = OnnxExporter.export_graph(val, do_type_check=False)
+                val = OnnxExporter.export_graph(val, subgraph_tensor_map=subgraph_tensor_map, do_type_check=False)
             elif isinstance(val, Node.AttributeRef):
                 onnx_attr = onnx.AttributeProto()
                 onnx_attr.name = key
@@ -196,7 +196,7 @@ class OnnxExporter(BaseExporter):
         return onnx_attrs
 
     @staticmethod
-    def export_node(node: Node) -> onnx.NodeProto:
+    def export_node(node: Node, subgraph_tensor_map) -> onnx.NodeProto:
         # Cannot pass in attrs directly as make_node will change the order
         onnx_node = onnx.helper.make_node(
             node.op,
@@ -205,7 +205,7 @@ class OnnxExporter(BaseExporter):
             name=node.name,
             domain=node.domain,
         )
-        onnx_node.attribute.extend(OnnxExporter.export_attributes(node.attrs))
+        onnx_node.attribute.extend(OnnxExporter.export_attributes(node.attrs, subgraph_tensor_map))
         return onnx_node
 
     @staticmethod
@@ -259,7 +259,10 @@ class OnnxExporter(BaseExporter):
         )
 
     @staticmethod
-    def export_graph(graph: Graph, do_type_check=True) -> onnx.GraphProto:
+    def export_graph(graph: Graph,
+                     tensor_map:"OrderedDict[str, Tensor]" = None,
+                     subgraph_tensor_map: "OrderedDict[str, Tensor]" = None,
+                     do_type_check=True) -> onnx.GraphProto:
         """
         Export an onnx-graphsurgeon Graph to an ONNX GraphProto.
 
@@ -270,10 +273,14 @@ class OnnxExporter(BaseExporter):
                                   Defaults to True.
         """
         check_duplicate_node_names(graph.nodes, level=G_LOGGER.WARNING)
-        nodes = [OnnxExporter.export_node(node) for node in graph.nodes]
+        nodes = [OnnxExporter.export_node(node, subgraph_tensor_map) for node in graph.nodes]
         inputs = [OnnxExporter.export_value_info_proto(inp, do_type_check) for inp in graph.inputs]
         outputs = [OnnxExporter.export_value_info_proto(out, do_type_check) for out in graph.outputs]
-        tensor_map = graph.tensors()
+        if tensor_map is None:
+            tensor_map = graph.tensors()
+            tensor_map = misc.unique_dicts(tensor_map, subgraph_tensor_map)
+        else:
+            tensor_map = misc.combine_dicts(tensor_map, subgraph_tensor_map)
         initializer = [
             OnnxExporter.export_tensor_proto(tensor)
             for tensor in tensor_map.values()
@@ -327,7 +334,19 @@ def export_onnx(graph: Graph, do_type_check=True, **kwargs) -> "onnx.ModelProto"
     Returns:
         onnx.ModelProto: A corresponding ONNX model.
     """
-    onnx_graph = OnnxExporter.export_graph(graph, do_type_check=do_type_check)
+    sub_graphs = graph.subgraphs(recursive=True)
+
+    graph_constants_list = []
+    for sub_graph in sub_graphs:
+        graph_constants = {name: tensor for name, tensor in sub_graph.tensors().items() if isinstance(tensor, Constant)}
+        graph_constants_list.append(graph_constants)
+
+    if len(graph_constants_list) == 0:
+        intersection = None
+    else:
+        intersection = {k: graph_constants_list[0][k] for k in graph_constants_list[0] if all(k in d for d in graph_constants_list[1:])}
+
+    onnx_graph = OnnxExporter.export_graph(graph, tensor_map=intersection, subgraph_tensor_map=intersection, do_type_check=do_type_check)
     onnx_functions = [OnnxExporter.export_function(func) for func in graph.functions]
     kwargs["functions"] = onnx_functions
 

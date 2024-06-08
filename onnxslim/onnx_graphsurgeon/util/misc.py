@@ -69,6 +69,18 @@ def combine_dicts(dict0, dict1):
     return combined
 
 
+def unique_dicts(dict0, dict1):
+    """
+    Substract two dictionaries. Values in the second will be substracted from the first.
+    """
+    if not dict1:
+        return dict0
+
+    unique_dict = {k: v for k, v in dict0.items() if k not in dict1}
+
+    return unique_dict
+
+
 def is_dynamic_dimension(dim):
     """Check if a dimension is dynamic (non-integer or negative)."""
     return not isinstance(dim, int) or dim < 0
