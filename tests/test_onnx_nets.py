@@ -1,6 +1,7 @@
 import os
 import subprocess
 import warnings
+import shutil
 
 import pytest
 import timm
@@ -27,10 +28,11 @@ class TestTorchVisionClass:
         """Test various TorchVision models with random input tensors of a specified shape."""
         model = model(pretrained=PRETRAINED)
         x = torch.rand(shape)
-        os.makedirs(f"tmp/{request.node.name}", exist_ok=True)
+        directory = "tmp/" + request.node.name
+        os.makedirs(directory, exist_ok=True)
 
-        filename = f"tmp/{request.node.name}/{request.node.name}.onnx"
-        slim_filename = f"tmp/{request.node.name}/{request.node.name}_slim.onnx"
+        filename = f"{directory}/{request.node.name}.onnx"
+        slim_filename = f"{directory}/{request.node.name}_slim.onnx"
 
         torch.onnx.export(model, x, filename)
 
@@ -41,7 +43,7 @@ class TestTorchVisionClass:
         print(output)
         assert result.returncode == 0
 
-        os.remove(filename)
+        shutil.rmtree(directory, ignore_errors=True)
 
 
 class TestTimmClass:
@@ -55,12 +57,12 @@ class TestTimmClass:
         model = timm.create_model(model_name, pretrained=PRETRAINED)
         input_size = model.default_cfg.get("input_size")
         x = torch.randn((1,) + input_size)
-
+        directory = "tmp/" + request.node.name
         try:
-            os.makedirs(f"tmp/{request.node.name}", exist_ok=True)
+            os.makedirs(directory, exist_ok=True)
 
-            filename = f"tmp/{request.node.name}/{request.node.name}.onnx"
-            slim_filename = f"tmp/{request.node.name}/{request.node.name}_slim.onnx"
+            filename = f"{directory}/{request.node.name}.onnx"
+            slim_filename = f"{directory}/{request.node.name}_slim.onnx"
             torch.onnx.export(model, x, filename)
         except Exception as e:
             print(f"An unexpected error occurred: {str(e)}")
@@ -75,7 +77,7 @@ class TestTimmClass:
         print(output)
         assert result.returncode == 0
 
-        os.remove(filename)
+        shutil.rmtree(directory, ignore_errors=True)
 
 
 if __name__ == "__main__":

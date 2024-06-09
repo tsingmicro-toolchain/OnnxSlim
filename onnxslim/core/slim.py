@@ -1,8 +1,5 @@
-import logging
 import os
-import sys
 import tempfile
-from typing import Dict, List
 
 import numpy as np
 import onnx
@@ -12,13 +9,7 @@ import onnxslim.onnx_graphsurgeon as gs
 from onnxslim.core.optimizer import delete_node, optimize_model
 from onnxslim.core.symbolic_shape_infer import SymbolicShapeInference
 from onnxslim.onnx_graphsurgeon.ir.tensor import Constant
-from onnxslim.utils import (
-    dump_model_info_to_disk,
-    gen_onnxruntime_input_data,
-    logger,
-    onnxruntime_inference,
-    print_model_info_as_table,
-)
+from onnxslim.utils import logger, save
 
 DEBUG = bool(os.getenv("ONNXSLIM_DEBUG"))
 AUTO_MERGE = True if os.getenv("ONNXSLIM_AUTO_MERGE") is None else bool(int(os.getenv("ONNXSLIM_AUTO_MERGE")))
@@ -91,8 +82,8 @@ def shape_infer(model: onnx.ModelProto):
     try:
         logger.debug("try onnxruntime shape infer.")
         model = SymbolicShapeInference.infer_shapes(model, auto_merge=AUTO_MERGE)
-    except Exception:
-        logger.debug("onnxruntime shape infer failed, try onnx shape infer.")
+    except Exception as err:
+        logger.debug(f"onnxruntime shape infer failed, try onnx shape infer. {err}")
         if model.ByteSize() >= checker.MAXIMUM_PROTOBUF:
             tmp_dir = tempfile.TemporaryDirectory()
             tmp_path = os.path.join(tmp_dir.name, "tmp.onnx")
