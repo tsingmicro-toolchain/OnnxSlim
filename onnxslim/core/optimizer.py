@@ -160,6 +160,13 @@ def graph_constant_fold_inplace(graph):
             if len(node.inputs) > 1 and isinstance(node.inputs[1], Constant) and np.all(node.inputs[1].values == 1):
                 idx = 0 if idx == 1 else 1
                 delete_node(node, idx)
+        elif node.op == "Concat":
+            if len(node.inputs) == 1:
+                delete_node(node)
+            else:
+                for input in node.inputs:
+                    if isinstance(input, Constant) and input.values.size == 0:
+                        node.inputs.remove(input)
 
 
 @register_fusion_pattern("FusionPadConv")
