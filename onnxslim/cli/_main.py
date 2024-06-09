@@ -116,7 +116,7 @@ def slim(
         model = output_modification(model, outputs)
 
     if model_check:
-        input_data_dict, raw_onnx_output = check_onnx(model, model_check_inputs)
+        input_data_dict, raw_onnx_output, model = check_onnx(model, model_check_inputs)
 
     if not no_shape_infer:
         model = shape_infer(model)
@@ -140,7 +140,7 @@ def slim(
         model = convert_data_format(model, dtype)
 
     if model_check:
-        slimmed_onnx_output = onnxruntime_inference(model, input_data_dict)
+        slimmed_onnx_output, model = onnxruntime_inference(model, input_data_dict)
         check_result(raw_onnx_output, slimmed_onnx_output)
 
     if not output_model:

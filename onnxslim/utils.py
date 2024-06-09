@@ -136,15 +136,38 @@ def gen_onnxruntime_input_data(
 
 
 def onnxruntime_inference(model: onnx.ModelProto, input_data: dict) -> Dict[str, np.array]:
+    import os
+    import onnx
+    import tempfile
     import onnxruntime as rt
 
-    sess = rt.InferenceSession(model.SerializeToString(), providers=["CPUExecutionProvider"])
+    if model.ByteSize() >= onnx.checker.MAXIMUM_PROTOBUF:
+        tmp_dir = tempfile.TemporaryDirectory()
+        tmp_path = os.path.join(tmp_dir.name, "tmp.onnx")
+        location = os.path.basename(tmp_path) + ".data"
+        if os.path.exists(location):
+            os.remove(location)
+        onnx.save(
+            model,
+            tmp_path,
+            save_as_external_data=True,
+            all_tensors_to_one_file=True,
+            location=location,
+        )
+        onnx_model = tmp_path
+    else:
+        onnx_model = onnx_model.SerializeToString()
+
+    sess = rt.InferenceSession(onnx_model, providers=["CPUExecutionProvider"])
     onnx_output = sess.run(None, input_data)
 
     output_names = [output.name for output in sess.get_outputs()]
     onnx_output = dict(zip(output_names, onnx_output))
 
-    return onnx_output
+    if isinstance(onnx_model, str):
+        model = onnx.load(onnx_model)
+
+    return onnx_output, model
 
 
 def print_model_info_as_table(model_name: str, model_info_list: List[Dict], elapsed_time: float = None):
@@ -374,9 +397,9 @@ def model_save_as_external_data(model: onnx.ModelProto, model_path: str):
 def check_onnx(model: onnx.ModelProto, model_check_inputs=None):
     """Validates an ONNX model by generating input data and performing inference to check outputs."""
     input_data_dict = gen_onnxruntime_input_data(model, model_check_inputs)
-    raw_onnx_output = onnxruntime_inference(model, input_data_dict)
+    raw_onnx_output, model = onnxruntime_inference(model, input_data_dict)
 
-    return input_data_dict, raw_onnx_output
+    return input_data_dict, raw_onnx_output, model
 
 
 def check_point(model: onnx.ModelProto):
