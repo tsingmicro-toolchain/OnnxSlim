@@ -148,19 +148,18 @@ class OnnxExporter(BaseExporter):
                 )
             )
 
-        if tensor.dtype is not None:
-            if isinstance(tensor, Constant) or tensor.type == "tensor_type":
-                onnx_tensor = onnx.helper.make_tensor_value_info(tensor.name, dtype_to_onnx(tensor.dtype), tensor.shape)
-            elif tensor.type == "sequence_type":
-                onnx_tensor = onnx.helper.make_tensor_sequence_value_info(
-                    tensor.name, dtype_to_onnx(tensor.dtype), tensor.shape
-                )
-            elif tensor.type == "sparse_tensor_type":
-                onnx_tensor = onnx.helper.make_sparse_tensor_value_info(
-                    tensor.name, dtype_to_onnx(tensor.dtype), tensor.shape
-                )
-        else:
+        if tensor.dtype is None:
             onnx_tensor = onnx.helper.make_empty_tensor_value_info(tensor.name)
+        elif isinstance(tensor, Constant) or tensor.type == "tensor_type":
+            onnx_tensor = onnx.helper.make_tensor_value_info(tensor.name, dtype_to_onnx(tensor.dtype), tensor.shape)
+        elif tensor.type == "sequence_type":
+            onnx_tensor = onnx.helper.make_tensor_sequence_value_info(
+                tensor.name, dtype_to_onnx(tensor.dtype), tensor.shape
+            )
+        elif tensor.type == "sparse_tensor_type":
+            onnx_tensor = onnx.helper.make_sparse_tensor_value_info(
+                tensor.name, dtype_to_onnx(tensor.dtype), tensor.shape
+            )
         return onnx_tensor
 
     @staticmethod
@@ -220,11 +219,11 @@ class OnnxExporter(BaseExporter):
         # So we need to replace all Constant tensors with onnx Constant nodes which produce them.
         # We need to be careful to (a) preserve topological ordering and (b) not make the new nodes visible to the user.
         func_nodes = func.nodes.copy()
-        new_const_nodes = []
-        for tensor in func.tensors().values():
-            if isinstance(tensor, Constant):
-                # Copying the tensor prevents the new node from appearing in the Constant tensor's inputs.
-                new_const_nodes.append(Node("Constant", attrs={"value": tensor}, outputs=[tensor.copy()]))
+        new_const_nodes = [
+            Node("Constant", attrs={"value": tensor}, outputs=[tensor.copy()])
+            for tensor in func.tensors().values()
+            if isinstance(tensor, Constant)
+        ]
         # Const nodes have no inputs, so this maintains a topological ordering.
         func_nodes = new_const_nodes + func_nodes
 
@@ -238,7 +237,7 @@ class OnnxExporter(BaseExporter):
         onnx_outputs = [out.name for out in func.outputs]
 
         attributes = []
-        attribute_protos = dict()
+        attribute_protos = {}
         for attr_name, default_val in func.attrs.items():
             if default_val is None:
                 attributes.append(attr_name)
@@ -259,10 +258,12 @@ class OnnxExporter(BaseExporter):
         )
 
     @staticmethod
-    def export_graph(graph: Graph,
-                     tensor_map:"OrderedDict[str, Tensor]" = None,
-                     subgraph_tensor_map: "OrderedDict[str, Tensor]" = None,
-                     do_type_check=True) -> onnx.GraphProto:
+    def export_graph(
+        graph: Graph,
+        tensor_map: "OrderedDict[str, Tensor]" = None,
+        subgraph_tensor_map: "OrderedDict[str, Tensor]" = None,
+        do_type_check=True,
+    ) -> onnx.GraphProto:
         """
         Export an onnx-graphsurgeon Graph to an ONNX GraphProto.
 
@@ -341,12 +342,18 @@ def export_onnx(graph: Graph, do_type_check=True, **kwargs) -> "onnx.ModelProto"
         graph_constants = {name: tensor for name, tensor in sub_graph.tensors().items() if isinstance(tensor, Constant)}
         graph_constants_list.append(graph_constants)
 
-    if len(graph_constants_list) == 0:
+    if not graph_constants_list:
         intersection = None
     else:
-        intersection = {k: graph_constants_list[0][k] for k in graph_constants_list[0] if all(k in d for d in graph_constants_list[1:])}
+        intersection = {
+            k: graph_constants_list[0][k]
+            for k in graph_constants_list[0]
+            if all(k in d for d in graph_constants_list[1:])
+        }
 
-    onnx_graph = OnnxExporter.export_graph(graph, tensor_map=intersection, subgraph_tensor_map=intersection, do_type_check=do_type_check)
+    onnx_graph = OnnxExporter.export_graph(
+        graph, tensor_map=intersection, subgraph_tensor_map=intersection, do_type_check=do_type_check
+    )
     onnx_functions = [OnnxExporter.export_function(func) for func in graph.functions]
     kwargs["functions"] = onnx_functions
 

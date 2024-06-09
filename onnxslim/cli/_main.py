@@ -62,29 +62,28 @@ def slim(
 
     from onnxslim.core.slim import (
         convert_data_format,
+        freeze,
         input_shape_modification,
+        optimize,
         output_modification,
         shape_infer,
-        optimize,
-        freeze,
     )
-
     from onnxslim.utils import (
-        dump_model_info_to_disk,
-        onnxruntime_inference,
-        print_model_info_as_table,
-        model_save_as_external_data,
-        summarize_model,
-        init_logging,
-        check_result,
         check_onnx,
         check_point,
+        check_result,
+        dump_model_info_to_disk,
+        init_logging,
+        model_save_as_external_data,
+        onnxruntime_inference,
+        print_model_info_as_table,
         save,
+        summarize_model,
     )
 
     init_logging(verbose)
 
-    MAX_ITER = 10 if not os.getenv("ONNXSLIM_MAX_ITER") else int(os.getenv("ONNXSLIM_MAX_ITER"))
+    MAX_ITER = int(os.getenv("ONNXSLIM_MAX_ITER")) if os.getenv("ONNXSLIM_MAX_ITER") else 10
 
     if isinstance(model, str):
         model_name = Path(model).name
@@ -146,20 +145,19 @@ def slim(
 
     if not output_model:
         return model
-    else:
-        slimmed_info = summarize_model(model)
-        save(model, output_model, model_check)
-        if slimmed_info["model_size"] >= onnx.checker.MAXIMUM_PROTOBUF:
-            model_size = model.ByteSize()
-            slimmed_info["model_size"] = [model_size, slimmed_info["model_size"]]
-        end_time = time.time()
-        elapsed_time = end_time - start_time
+    slimmed_info = summarize_model(model)
+    save(model, output_model, model_check)
+    if slimmed_info["model_size"] >= onnx.checker.MAXIMUM_PROTOBUF:
+        model_size = model.ByteSize()
+        slimmed_info["model_size"] = [model_size, slimmed_info["model_size"]]
+    end_time = time.time()
+    elapsed_time = end_time - start_time
 
-        print_model_info_as_table(
-            model_name,
-            [float_info, slimmed_info],
-            elapsed_time,
-        )
+    print_model_info_as_table(
+        model_name,
+        [float_info, slimmed_info],
+        elapsed_time,
+    )
 
 
 def main():
