@@ -156,7 +156,7 @@ def onnxruntime_inference(model: onnx.ModelProto, input_data: dict) -> Dict[str,
         )
         onnx_model = tmp_path
     else:
-        onnx_model = onnx_model.SerializeToString()
+        onnx_model = model.SerializeToString()
 
     sess = rt.InferenceSession(onnx_model, providers=["CPUExecutionProvider"])
     onnx_output = sess.run(None, input_data)
