@@ -780,7 +780,7 @@ class Graph(object):
         for tensor in self.tensors().values():
             if len(tensor.inputs) == 1:
                 node = tensor.inputs[0]
-                if node.op == "Constant":
+                if node.op == "Constant" and tensor.outputs:
                     if len(node.attrs) != 1:
                         G_LOGGER.warning("Constant node must contain exactly one attribute")
                         continue
@@ -1227,7 +1227,7 @@ class Graph(object):
             graph_tensors = self.tensors()
             for name, values in constant_values.items():
                 tensor = graph_tensors[name]
-                if isinstance(tensor, Constant):
+                if isinstance(tensor, Constant) or not tensor.outputs:
                     # No need to fold tensors that are already constant.
                     continue
 

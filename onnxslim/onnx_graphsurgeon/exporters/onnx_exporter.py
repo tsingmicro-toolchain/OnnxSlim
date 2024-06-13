@@ -337,19 +337,19 @@ def export_onnx(graph: Graph, do_type_check=True, **kwargs) -> "onnx.ModelProto"
     """
     sub_graphs = graph.subgraphs(recursive=True)
 
-    graph_constants_list = []
-    for sub_graph in sub_graphs:
-        graph_constants = {name: tensor for name, tensor in sub_graph.tensors().items() if isinstance(tensor, Constant)}
-        graph_constants_list.append(graph_constants)
+    graph_constants_list = [
+        {name: tensor for name, tensor in sub_graph.tensors().items() if isinstance(tensor, Constant)}
+        for sub_graph in sub_graphs
+    ]
 
     if not graph_constants_list:
         intersection = None
     else:
-        intersection = {
-            k: graph_constants_list[0][k]
-            for k in graph_constants_list[0]
-            if all(k in d for d in graph_constants_list[1:])
-        }
+        intersection = (
+            {key: graph_constants_list[0][key] for key in graph_constants_list[0]
+            if all(key in d and graph_constants_list[0][key] == d[key] for d in graph_constants_list[1:])}
+            if graph_constants_list else None
+        )
 
     onnx_graph = OnnxExporter.export_graph(
         graph, tensor_map=intersection, subgraph_tensor_map=intersection, do_type_check=do_type_check
