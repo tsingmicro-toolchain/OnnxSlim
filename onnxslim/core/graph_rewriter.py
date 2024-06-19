@@ -2,6 +2,7 @@ import re
 from abc import ABCMeta, abstractmethod
 
 from onnxslim.utils import logger
+import onnxslim.onnx_graphsurgeon as gs
 from onnxslim.onnx_graphsurgeon import Constant
 
 
@@ -9,6 +10,8 @@ def get_node_users(node):
     """Retrieve the list of nodes that use the outputs of the given node."""
     users = []
     for output in node.outputs:  # output is a Variable
+        if len(output.outputs) == 0:
+            users.append(output)
         users.extend(iter(output.outputs))
     return users
 
@@ -28,6 +31,15 @@ def get_node_feeds(node):
                 else:
                     feeds.append(feed)
     return feeds
+
+
+def get_name(name):
+    _illegal_char_regex = re.compile("[^0-9a-zA-Z_]+")
+    sanitized_name = _illegal_char_regex.sub("_", name)
+    if sanitized_name.isdigit():
+        sanitized_name = "_" + sanitized_name
+
+    return sanitized_name
 
 
 class NodeDescriptor:
@@ -88,9 +100,10 @@ class PatternMatcher:
         self.pattern = pattern
         self.priority = priority
         self.pattern_dict = {node.name: node for node in pattern.nodes}
+        self.output_names = [node.name for node in pattern.nodes if node.op == 'output']
 
     def get_match_point(self):
-        return self.pattern_dict[self.pattern_dict['output'].input_names[0]]
+        return self.pattern_dict[self.pattern_dict[self.output_names[0]].input_names[0]]
 
     def match(self, node):
         match_point = self.get_match_point()
@@ -142,3 +155,35 @@ class PatternMatcher:
 
     def parameter_check(self):
         return True
+
+
+class PatternGenerator:
+    def __init__(self, onnx_model):
+        self.graph = gs.import_onnx(onnx_model)
+        self.graph.fold_constants().cleanup().toposort()
+
+    def generate(self):
+        inputs = self.graph.inputs
+        outputs = self.graph.outputs
+        nodes = self.graph.nodes
+
+        template = []
+        for input in inputs:
+            name = get_name(input.name)
+            template.append(' '.join(['input', name, '0', str(len(input.outputs))] +
+                                     [get_name(output.name) for output in input.outputs]))
+
+        for node in nodes:
+            if node.op != "Constant":
+                name = get_name(node.name)
+                feeds = get_node_feeds(node)
+                users = get_node_users(node)
+                template.append(' '.join([node.op, name, str(len(feeds)), str(len(users))] +
+                                         [get_name(feed.name) if not isinstance(feed, Constant) else '?' for feed in feeds] +
+                                         [get_name(user.name) if not isinstance(user, Constant) else '?' for user in users]))
+
+        for output in outputs:
+            name = get_name(output.name)
+            template.append(' '.join(['output', name, str(len(output.inputs)), '0'] + [get_name(input.name) for input in output.inputs]))
+
+        return '\n'.join(template)
