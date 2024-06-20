@@ -314,10 +314,6 @@ class SparseValues(LazyValues):
         import onnx
         import onnx.numpy_helper
 
-        from onnxslim.onnx_graphsurgeon.importers.onnx_importer import (
-            get_dtype_name,
-            get_numpy_type,
-        )
 
         supported_index_type = [onnx.TensorProto.INT64]
         if self.tensor.indices.data_type not in supported_index_type:

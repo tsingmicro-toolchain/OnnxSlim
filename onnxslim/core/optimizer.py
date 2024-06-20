@@ -5,11 +5,16 @@ import numpy as np
 import onnx
 
 import onnxslim.onnx_graphsurgeon as gs
+from onnxslim.core.graph_rewriter import (
+    Pattern,
+    PatternMatcher,
+    get_node_feeds,
+    get_node_users,
+)
 from onnxslim.onnx_graphsurgeon.exporters.onnx_exporter import dtype_to_onnx
 from onnxslim.onnx_graphsurgeon.ir.graph import Graph
 from onnxslim.onnx_graphsurgeon.ir.tensor import Constant, Variable
 from onnxslim.utils import logger
-from onnxslim.core.graph_rewriter import PatternMatcher, Pattern, get_node_feeds, get_node_users
 
 DEFAULT_FUSION_PATTERNS = OrderedDict()
 
@@ -173,12 +178,13 @@ def graph_constant_fold_inplace(graph):
 class PadConvMatcher(PatternMatcher):
     def __init__(self, priority):
         pattern = Pattern(
-            '''
+            """
             input  input  0 1 pad_0
             Pad    pad_0  1+ 1 input conv_0
             Conv   conv_0 1+ 1 pad_0 output
             output output 1 0 conv_0
-            ''')
+            """
+        )
         super().__init__(pattern, priority)
 
     @property
@@ -234,17 +240,20 @@ class PadConvMatcher(PatternMatcher):
 
         return match_case
 
+
 register_fusion_pattern(PadConvMatcher(1))
+
 
 class ConvBatchNormMatcher(PatternMatcher):
     def __init__(self, priority):
         pattern = Pattern(
-            '''
+            """
             input              input  0 1 conv_0
             Conv               conv_0 3 1 input ? ? bn_0
             BatchNormalization bn_0   5 1 conv_0 ? ? ? ? output
             output             output 1 0 bn_0
-            ''')
+            """
+        )
         super().__init__(pattern, priority)
 
     @property
@@ -309,17 +318,20 @@ class ConvBatchNormMatcher(PatternMatcher):
 
         return match_case
 
+
 register_fusion_pattern(ConvBatchNormMatcher(1))
+
 
 class SlicePatternMatcher(PatternMatcher):
     def __init__(self, priority):
         pattern = Pattern(
-            '''
+            """
             input  input   0 1 slice_0
             Slice  slice_0 5 1 input   ? ? ? ? slice_1
             Slice  slice_1 5 1 slice_0 ? ? ? ? output
             output output 1 0 slice_1
-            ''')  # to check here slice_0
+            """
+        )  # to check here slice_0
         super().__init__(pattern, priority)
 
     @property
@@ -406,17 +418,20 @@ class SlicePatternMatcher(PatternMatcher):
 
         return match_case
 
+
 register_fusion_pattern(SlicePatternMatcher(1))
+
 
 class ReshapePatternMatcher(PatternMatcher):
     def __init__(self, priority):
         pattern = Pattern(
-            '''
+            """
             input    input   0 1 reshape_0
             Reshape  reshape_0 2 1 input   ? reshape_1
             Reshape  reshape_1 2 1 reshape_0 ? output
             output   output 1 0 reshape_1
-            ''')
+            """
+        )
         super().__init__(pattern, priority)
 
     @property
@@ -431,6 +446,7 @@ class ReshapePatternMatcher(PatternMatcher):
         first_reshape_node_users = get_node_users(first_reshape_node)
         if len(first_reshape_node_users) == 1:
             second_reshape_node = node
+
             def check_constant_mergeable(reshape_node):
                 if isinstance(reshape_node.inputs[1], Constant):
                     input_shape = reshape_node.inputs[0].shape
@@ -463,17 +479,20 @@ class ReshapePatternMatcher(PatternMatcher):
 
         return match_case
 
+
 register_fusion_pattern(ReshapePatternMatcher(1))
+
 
 class MatMulAddPatternMatcher(PatternMatcher):
     def __init__(self, priority):
         pattern = Pattern(
-            '''
+            """
             input    input    0 1 matmul_0
             MatMul   matmul_0 2 1 input ? add_0
             Add      add_0    2 1 matmul_0 ? output
             output   output   1 0 add_0
-            ''')
+            """
+        )
         super().__init__(pattern, priority)
 
     @property
@@ -623,12 +642,14 @@ class MatMulAddPatternMatcher(PatternMatcher):
                 )
         return match_case
 
+
 register_fusion_pattern(MatMulAddPatternMatcher(1))
+
 
 class GeluPatternMatcher(PatternMatcher):
     def __init__(self, priority):
         pattern = Pattern(
-            '''
+            """
             input  input  0 2 mul_0 div_0
             Div    div_0  2 1 input ? erf_0
             Erf    erf_0  1 1 div_0 add_0
@@ -636,7 +657,8 @@ class GeluPatternMatcher(PatternMatcher):
             Mul    mul_0  2 1 input add_0 mul_1
             Mul    mul_1  2 1 mul_0 ? output
             output output 1 0 mul_1
-            ''')
+            """
+        )
         super().__init__(pattern, priority)
 
     @property
@@ -664,17 +686,20 @@ class GeluPatternMatcher(PatternMatcher):
 
         return match_case
 
+
 # register_fusion_pattern(GeluPatternMatcher(1))
+
 
 class ReducePatternMatcher(PatternMatcher):
     def __init__(self, priority):
         pattern = Pattern(
-            '''
+            """
             input     input       0 1 reduce_0
             ReduceSum reduce_0    1 1 input unsqueeze_0
             Unsqueeze unsqueeze_0 1 1 reduce_0 output
             output    output      1 0 unsqueeze_0
-            ''')
+            """
+        )
         super().__init__(pattern, priority)
 
     @property
@@ -712,7 +737,9 @@ class ReducePatternMatcher(PatternMatcher):
 
         return match_case
 
+
 register_fusion_pattern(ReducePatternMatcher(1))
+
 
 @gs.Graph.register()
 def replace_custom_layer(

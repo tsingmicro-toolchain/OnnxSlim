@@ -1,7 +1,7 @@
 import os
+import shutil
 import subprocess
 import warnings
-import shutil
 
 import pytest
 import timm

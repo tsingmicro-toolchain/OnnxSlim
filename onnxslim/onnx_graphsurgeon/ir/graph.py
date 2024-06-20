@@ -1178,8 +1178,9 @@ class Graph(object):
                 names = [t.name for t in graph_clone.outputs]
                 try:
                     import os
+                    import tempfile
+
                     import onnx
-                    import tempfile                    
                     import onnxruntime as onnxrt
 
                     onnx_model = export_onnx(graph_clone, do_type_check=False)

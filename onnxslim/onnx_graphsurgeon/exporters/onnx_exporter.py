@@ -346,9 +346,13 @@ def export_onnx(graph: Graph, do_type_check=True, **kwargs) -> "onnx.ModelProto"
         intersection = None
     else:
         intersection = (
-            {key: graph_constants_list[0][key] for key in graph_constants_list[0]
-            if all(key in d and graph_constants_list[0][key] == d[key] for d in graph_constants_list[1:])}
-            if graph_constants_list else None
+            {
+                key: graph_constants_list[0][key]
+                for key in graph_constants_list[0]
+                if all(key in d and graph_constants_list[0][key] == d[key] for d in graph_constants_list[1:])
+            }
+            if graph_constants_list
+            else None
         )
 
     onnx_graph = OnnxExporter.export_graph(

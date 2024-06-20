@@ -137,8 +137,9 @@ def gen_onnxruntime_input_data(
 
 def onnxruntime_inference(model: onnx.ModelProto, input_data: dict) -> Dict[str, np.array]:
     import os
-    import onnx
     import tempfile
+
+    import onnx
     import onnxruntime as rt
 
     if model.ByteSize() >= onnx.checker.MAXIMUM_PROTOBUF:

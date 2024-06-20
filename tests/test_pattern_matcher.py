@@ -1,6 +1,6 @@
 import os
-import pytest
 
+import pytest
 import torch
 import torch.nn as nn
 

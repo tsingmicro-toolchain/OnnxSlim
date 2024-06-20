@@ -1,13 +1,12 @@
 import os
-import pytest
 
+import onnx
+import pytest
 import torch
 import torch.nn as nn
 
-import onnx
-from onnxslim import slim
-from onnxslim import register_fusion_pattern
-from onnxslim.core.graph_rewriter import PatternMatcher, Pattern, PatternGenerator
+from onnxslim import register_fusion_pattern, slim
+from onnxslim.core.graph_rewriter import Pattern, PatternGenerator, PatternMatcher
 
 
 class TestPatternGenerator:
