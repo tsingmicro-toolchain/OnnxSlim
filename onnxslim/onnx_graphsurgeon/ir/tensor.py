@@ -314,7 +314,6 @@ class SparseValues(LazyValues):
         import onnx
         import onnx.numpy_helper
 
-
         supported_index_type = [onnx.TensorProto.INT64]
         if self.tensor.indices.data_type not in supported_index_type:
             G_LOGGER.critical(
