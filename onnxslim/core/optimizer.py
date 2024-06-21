@@ -193,13 +193,10 @@ class PadConvMatcher(PatternMatcher):
         """Returns the name of the fusion pattern used."""
         return "FusionPadConv"
 
-    def parameter_check(self):
+    def parameter_check(self) -> bool:
         """Validates if the padding parameter for a convolutional node is a constant."""
         pad_node = self.pad_0
-
-
-def parameter_check(self) -> bool:
-    return isinstance(pad_node.inputs[1], Constant)
+        return isinstance(pad_node.inputs[1], Constant)
 
     def rewrite(self):
         """Rewrites the padding parameter for a convolutional node to use a constant if the current parameter is not a
