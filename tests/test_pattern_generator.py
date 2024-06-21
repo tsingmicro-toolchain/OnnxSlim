@@ -72,7 +72,10 @@ class TestPatternGenerator:
                 raise Exception("Pattern Matched")
 
         register_fusion_pattern(GeluMatcher(pattern, 1))
-        slim(model_filename, f"{directory}/{request.node.name}_slim.onnx")
+        with pytest.raises(Exception) as excinfo:
+            slim(model_filename, f"{directory}/{request.node.name}_slim.onnx")
+
+        assert str(excinfo.value) == "Pattern Matched"
 
 
 if __name__ == "__main__":
