@@ -26,8 +26,8 @@ jobs:
 
       - name: pattern matcher test
         run: |
-          python tests/test_pattern_matcher.py
+          pytest tests/test_pattern_matcher.py
 
       - name: pattern generator test
         run: |
-          python tests/test_pattern_generator.py
+          pytest tests/test_pattern_generator.py
