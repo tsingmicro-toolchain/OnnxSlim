@@ -31,3 +31,9 @@ jobs:
       - name: pattern generator test
         run: |
           pytest tests/test_pattern_generator.py
+
+      - name: yolo test
+        run: |
+          pip install pytest pytest-xdist onnxruntime timm torchvision --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu
+          pip install ultralytics
+          pytest tests/test_yolo.py
