@@ -1,9 +1,10 @@
-import pytest
 from itertools import product
 
+import pytest
 from ultralytics import YOLO
 from ultralytics.cfg import TASK2MODEL, TASKS
 from ultralytics.utils import ASSETS
+
 SOURCE = ASSETS / "bus.jpg"
 
 
@@ -24,7 +25,8 @@ class TestYolo:
         YOLO(file)([SOURCE] * batch, imgsz=64 if dynamic else 32)  # exported model inference
 
     @pytest.mark.parametrize(
-        "task, dynamic, int8, half, batch", product(["yolov10n", "yolov10s", "yolov10m", "yolov10l", "yolov10x"], [True, False], [False], [False], [1, 2])
+        "task, dynamic, int8, half, batch",
+        product(["yolov10n", "yolov10s", "yolov10m", "yolov10l", "yolov10x"], [True, False], [False], [False], [1, 2]),
     )
     def test_yolov10_export_onnx_matrix(self, request, task, dynamic, int8, half, batch):
         file = YOLO(task).export(
@@ -36,7 +38,7 @@ class TestYolo:
             batch=batch,
             simplify=True,
         )
-        YOLO(file)([SOURCE] * batch, imgsz=64 if dynamic else 32)  # exported model inference     
+        YOLO(file)([SOURCE] * batch, imgsz=64 if dynamic else 32)  # exported model inference
 
 
 if __name__ == "__main__":
