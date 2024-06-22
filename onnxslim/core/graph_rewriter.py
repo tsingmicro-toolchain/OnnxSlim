@@ -147,9 +147,7 @@ class PatternMatcher:
                 else:
                     if len(node_feeds) != len(pattern_node.input_names):
                         logger.debug(
-                            "len(node_feeds) != len(pattern_node.input_names)",
-                            len(node_feeds),
-                            len(pattern_node.input_names),
+                            f"len(node_feeds) != len(pattern_node.input_names) {len(node_feeds)} != {len(pattern_node.input_names)}",
                         )
                         return False
 
