@@ -952,11 +952,15 @@ class Graph(object):
                     graph_constants.update({out.name: out for out in node.outputs})
             return graph_constants
 
-        graph_constants = {
-            name: tensor
-            for name, tensor in clone_tensors.items()
-            if isinstance(tensor, Constant) and all(t.op != "Gather" for t in tensor.outputs)
-        }
+        graph_constants = {}
+        for name, tensor in clone_tensors.items():
+            if isinstance(tensor, Constant):
+                if any((t.op == "Gather" and t.inputs.index(tensor) == 0) for t in tensor.outputs):
+                    if len(tensor.outputs) <= 1:
+                        graph_constants[name] = tensor
+                else:
+                    graph_constants[name] = tensor
+
         graph_constants = update_foldable_outputs(graph_constants)
 
         # Pass 4: Shape Folding
@@ -1031,7 +1035,7 @@ class Graph(object):
 
             if len(slice.inputs) >= 3:
                 starts, ends = slice.inputs[1:3]
-                if any(not isinstance(t, Constant) for t in {starts, ends}):
+                if any(not isinstance(t, Constant) for t in [starts, ends]):
                     return None
                 starts, ends = get_scalar_value(starts), get_scalar_value(ends)
             elif "starts" in slice.attrs and "ends" in slice.attrs:
