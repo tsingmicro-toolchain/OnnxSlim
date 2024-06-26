@@ -63,6 +63,8 @@ def combine_dicts(dict0, dict1):
 
     Values in the second will overwrite values in the first.
     """
+    if dict1 is None:
+        return dict0
     combined = OrderedDict()
     combined.update(dict0)
     combined.update(dict1)

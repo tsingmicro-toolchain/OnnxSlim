@@ -287,6 +287,7 @@ class OnnxExporter(BaseExporter):
             for tensor in tensor_map.values()
             if isinstance(tensor, Constant) and not isinstance(tensor._values, SparseValues)
         ]
+
         sparse_initializer = [
             OnnxExporter.export_sparse_tensor_proto(tensor)
             for tensor in tensor_map.values()
@@ -356,7 +357,7 @@ def export_onnx(graph: Graph, do_type_check=True, **kwargs) -> "onnx.ModelProto"
         )
 
     onnx_graph = OnnxExporter.export_graph(
-        graph, tensor_map=intersection, subgraph_tensor_map=intersection, do_type_check=do_type_check
+        graph, tensor_map=graph.tensors(), subgraph_tensor_map=intersection, do_type_check=do_type_check
     )
     onnx_functions = [OnnxExporter.export_function(func) for func in graph.functions]
     kwargs["functions"] = onnx_functions
