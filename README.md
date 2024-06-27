@@ -27,9 +27,16 @@ OnnxSlim can help you slim your onnx model, with less operators, but same accura
 pip install onnxslim
 ```
 
-## Build From Source
+## Install From Source
 
+```bash
+pip install git+https://github.com/inisis/OnnxSlim@main
 ```
+
+## Install From Local
+
+```bash
+git clone https://github.com/inisis/OnnxSlim && cd OnnxSlim/
 pip install .
 ```
 
