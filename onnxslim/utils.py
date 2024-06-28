@@ -22,7 +22,7 @@ logging.basicConfig(
 )
 
 # Create a logger
-logger = logging.getLogger("ONNXSlim")
+logger = logging.getLogger("onnxslim")
 
 
 def init_logging(verbose=False):
@@ -512,3 +512,47 @@ def get_model_subgraph_size(model):
                 attr_str = ATTR_TYPE_MAPPING[attr.type]
                 if attr_str == "GRAPH":
                     print("subgraph", attr.g.ByteSize())
+
+
+def check_onnx_compatibility():
+    compatibility_dict = {
+        "1.18": "1.16",
+        "1.17": "1.15",
+        "1.16": "1.14.1",
+        "1.15": "1.14",
+        "1.14": "1.13",
+        "1.13": "1.12",
+        "1.12": "1.12",
+        "1.11": "1.11",
+        "1.10": "1.10",
+        "1.9": "1.10",
+        "1.8": "1.9",
+        "1.7": "1.8",
+        "1.6": "1.8",
+        "1.5": "1.7",
+        "1.4": "1.7",
+        "1.3": "1.7",
+        "1.2": "1.6",
+        "1.1": "1.6",
+        "1.0": "1.6",
+        "0.5": "1.5",
+        "0.4": "1.5",
+        "0.3": "1.4",
+        "0.2": "1.3",
+        "0.1": "1.3"
+    }
+    import onnx
+    import onnxruntime
+
+    
+    onnx_version = onnx.__version__
+    # ort_version = onnxruntime.__version__
+    ort_version = ".".join(onnxruntime.__version__.split("+")[0].split(".")[:2])
+    # Check compatibility
+    expected_onnx_version = compatibility_dict.get(ort_version)
+    if expected_onnx_version is None:
+        logger.warning(f"Onnx Runtime version {ort_version} has no specified compatible ONNX version.")
+    elif expected_onnx_version == onnx_version:
+        logger.info(f"Installed Onnx Runtime version {ort_version} is compatible with installed ONNX version {onnx_version}.")
+    else:
+        print(f"Installed Onnx Runtime version {ort_version} is not compatible with installed ONNX version {onnx_version}. Expected ONNX version: {expected_onnx_version}.")
