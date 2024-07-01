@@ -83,6 +83,8 @@ def delete_node(node, input_var_idx=0, output_var_idx=0):
     next_nodes = get_node_users(node)
     if next_nodes:
         for next_node in next_nodes:
+            if isinstance(next_node, Variable) and next_node.is_output:
+                continue
             index = next_node.inputs.index(node_variable)
             next_node.inputs.pop(index)
             next_node.inputs.insert(index, input_variable)
