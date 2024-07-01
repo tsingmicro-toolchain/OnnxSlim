@@ -172,7 +172,7 @@ class Tensor(object):
     @property
     def is_input(self):
         if hasattr(self, "_is_input"):
-            return  self._is_input
+            return self._is_input
         return False
 
     @is_input.setter
@@ -182,7 +182,7 @@ class Tensor(object):
     @property
     def is_output(self):
         if hasattr(self, "_is_output"):
-            return  self._is_output
+            return self._is_output
         return False
 
     @is_output.setter

@@ -539,12 +539,11 @@ def check_onnx_compatibility():
         "0.4": "1.5",
         "0.3": "1.4",
         "0.2": "1.3",
-        "0.1": "1.3"
+        "0.1": "1.3",
     }
     import onnx
     import onnxruntime
 
-    
     onnx_version = onnx.__version__
     # ort_version = onnxruntime.__version__
     ort_version = ".".join(onnxruntime.__version__.split("+")[0].split(".")[:2])
@@ -553,6 +552,10 @@ def check_onnx_compatibility():
     if expected_onnx_version is None:
         logger.warning(f"Onnx Runtime version {ort_version} has no specified compatible ONNX version.")
     elif expected_onnx_version == onnx_version:
-        logger.info(f"Installed Onnx Runtime version {ort_version} is compatible with installed ONNX version {onnx_version}.")
+        logger.info(
+            f"Installed Onnx Runtime version {ort_version} is compatible with installed ONNX version {onnx_version}."
+        )
     else:
-        print(f"Installed Onnx Runtime version {ort_version} is not compatible with installed ONNX version {onnx_version}. Expected ONNX version: {expected_onnx_version}.")
+        print(
+            f"Installed Onnx Runtime version {ort_version} is not compatible with installed ONNX version {onnx_version}. Expected ONNX version: {expected_onnx_version}."
+        )
