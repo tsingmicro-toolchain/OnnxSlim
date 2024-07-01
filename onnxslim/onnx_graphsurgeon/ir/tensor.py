@@ -169,6 +169,26 @@ class Tensor(object):
         """
         return self.name == other.name
 
+    @property
+    def is_input(self):
+        if hasattr(self, "_is_input"):
+            return  self._is_input
+        return False
+
+    @is_input.setter
+    def is_input(self, is_input: bool = False):
+        self._is_input = is_input
+
+    @property
+    def is_output(self):
+        if hasattr(self, "_is_output"):
+            return  self._is_output
+        return False
+
+    @is_output.setter
+    def is_output(self, is_output: bool = False):
+        self._is_output = is_output
+
 
 class Variable(Tensor):
     @staticmethod

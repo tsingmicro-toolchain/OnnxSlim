@@ -466,12 +466,14 @@ class OnnxImporter(BaseImporter):
         for inp in onnx_graph.input:
             if inp.name not in initializer_names:
                 tensor = get_tensor(inp, check_outer_graph=False)
+                tensor.is_input = True
                 graph_inputs.append(tensor)
 
         G_LOGGER.verbose("Importing graph outputs")
         graph_outputs = []  # List[Tensor]
         for out in onnx_graph.output:
             tensor = get_tensor(out, check_outer_graph=False)
+            tensor.is_output = True
             graph_outputs.append(tensor)
 
         G_LOGGER.verbose("Importing nodes")
