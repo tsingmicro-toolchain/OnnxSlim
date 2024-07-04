@@ -567,3 +567,25 @@ def check_onnx_compatibility():
         print(
             f"Installed Onnx Runtime version {ort_version} is not compatible with installed ONNX version {onnx_version}. Expected ONNX version: {expected_onnx_version}."
         )
+
+def get_max_tensor(model, topk=5):
+    graph = gs.import_onnx(model)
+
+    tensor_map = graph.tensors()
+    constant_tensors = [tensor for tensor in tensor_map.values() if isinstance(tensor, gs.Constant)]
+
+    sub_graphs = graph.subgraphs(recursive=True)
+    sub_graphs_constant_tensors = [
+        [tensor for name, tensor in sub_graph.tensors().items() if isinstance(tensor, gs.Constant)]
+        for sub_graph in sub_graphs
+    ]
+
+    constant_tensors.extend([tensor for tensors in sub_graphs_constant_tensors for tensor in tensors])
+
+    sizes = [tensor.values.size for tensor in constant_tensors]
+    sorted_indices = np.argsort(sizes)[::-1][:topk]
+
+    for i in sorted_indices:
+        tensor = constant_tensors[i]
+        print(f"Tensor name: {tensor.name}, shape: {tensor.values.shape}, dtype: {tensor.values.dtype} size: {tensor.values.size}")
+
