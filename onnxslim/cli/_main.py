@@ -74,7 +74,6 @@ def slim(
         check_result,
         dump_model_info_to_disk,
         init_logging,
-        model_save_as_external_data,
         onnxruntime_inference,
         print_model_info_as_table,
         save,
