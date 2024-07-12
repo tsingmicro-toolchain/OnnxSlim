@@ -96,10 +96,6 @@ def slim(
 
     start_time = time.time()
 
-    if save_as_external_data:
-        model_save_as_external_data(model, output_model)
-        return None
-
     if output_model or inspect:
         float_info = summarize_model(model)
 
@@ -146,8 +142,8 @@ def slim(
     if not output_model:
         return model
     slimmed_info = summarize_model(model)
-    save(model, output_model, model_check)
-    if slimmed_info["model_size"] >= onnx.checker.MAXIMUM_PROTOBUF:
+    save(model, output_model, model_check, save_as_external_data)
+    if slimmed_info["model_size"] >= onnx.checker.MAXIMUM_PROTOBUF or save_as_external_data:
         model_size = model.ByteSize()
         slimmed_info["model_size"] = [model_size, slimmed_info["model_size"]]
     end_time = time.time()
@@ -264,9 +260,6 @@ def main():
 
     if not args.inspect and args.dump_to_disk:
         parser.error("dump_to_disk can only be used with --inspect")
-
-    if args.save_as_external_data and args.output_model:
-        parser.error("--save_as_external_data can only be used for single model")
 
     slim(
         args.input_model,

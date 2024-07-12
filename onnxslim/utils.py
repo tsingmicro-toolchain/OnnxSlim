@@ -426,7 +426,7 @@ def is_converged(model: onnx.ModelProto, graph_ckpt, iter: int) -> bool:
         return False
 
 
-def save(model: onnx.ModelProto, model_path: str, model_check: bool = False):
+def save(model: onnx.ModelProto, model_path: str, model_check: bool = False, save_as_external_data: bool = False):
     """Save an ONNX model to a specified path, with optional model checking for validity."""
     if model_check:
         try:
@@ -435,7 +435,7 @@ def save(model: onnx.ModelProto, model_path: str, model_check: bool = False):
             logger.warning("Model too large and cannot be checked.")
 
     if model_path:  # model larger than 2GB can be saved, but compiler like trtexec won't parse it
-        if model.ByteSize() <= checker.MAXIMUM_PROTOBUF:
+        if model.ByteSize() <= checker.MAXIMUM_PROTOBUF and not save_as_external_data:
             onnx.save(model, model_path)
         else:
             import os
