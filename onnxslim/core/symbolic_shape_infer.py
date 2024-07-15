@@ -228,6 +228,7 @@ class SymbolicShapeInference:
             "NhwcConv": self._infer_NhwcConv,
             "PackedAttention": self._infer_PackedAttention,
             "PackedMultiHeadAttention": self._infer_PackedMultiHeadAttention,
+            "MultiScaleDeformableAttnTRT": self._infer_MultiScaleDeformableAttnTRT,
             "PythonOp": self._infer_PythonOp,
             "QuantizeLinear": self._infer_QuantizeLinear,
             "QuickGelu": self._infer_FastGelu,
@@ -2391,6 +2392,15 @@ class SymbolicShapeInference:
             assert shape_query is not None and len(shape_query) == 4
             output_shape = [shape_query[0], shape_query[1] * shape_query[3]]
 
+        output_dtype = self.known_vi_[node.input[0]].type.tensor_type.elem_type
+        vi = self.known_vi_[node.output[0]]
+        vi.CopyFrom(helper.make_tensor_value_info(node.output[0], output_dtype, output_shape))
+
+    def _infer_MultiScaleDeformableAttnTRT(self, node):
+        shape_value = self._try_get_shape(node, 0)
+        sampling_locations = self._try_get_shape(node, 3)
+        output_shape = shape_value
+        output_shape[1] = sampling_locations[1]
         output_dtype = self.known_vi_[node.input[0]].type.tensor_type.elem_type
         vi = self.known_vi_[node.output[0]]
         vi.CopyFrom(helper.make_tensor_value_info(node.output[0], output_dtype, output_shape))
