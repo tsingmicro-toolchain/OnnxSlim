@@ -184,7 +184,7 @@ def dead_node_elimination(graph):
                     if isinstance(input, Constant) and input.values.size == 0:
                         node.inputs.remove(input)
         elif node.op == "Sub":
-            if (isinstance(node.inputs[1], Constant) and isinstance(node.inputs[0], Variable)):
+            if isinstance(node.inputs[1], Constant) and isinstance(node.inputs[0], Variable):
                 constant_variable = node.inputs[1]
                 value = constant_variable.values
                 if value.ndim == 0 and value == 0:
