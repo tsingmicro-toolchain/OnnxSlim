@@ -912,7 +912,7 @@ def subexpression_elimination(graph):
         find_and_remove_replaceable_nodes(nodes)
 
 
-def tie_weights(graph, threshold=1*1024*1024):
+def tie_weights(graph, threshold=1 * 1024 * 1024):
     """Tie weights in a computational graph to reduce the number of parameters."""
 
     tensor_map = graph.tensors()
@@ -949,7 +949,9 @@ def tie_weights(graph, threshold=1*1024*1024):
                         if constant_tensor == filtered_constant_tensors[j]:
                             keep_constants[j] = False
                             replace_constant_references(constant_tensor, filtered_constant_tensors[j])
-                            logger.debug(f"Constant {filtered_constant_tensors[j].name} can be replaced by {constant_tensor.name}")
+                            logger.debug(
+                                f"Constant {filtered_constant_tensors[j].name} can be replaced by {constant_tensor.name}"
+                            )
 
 
 def optimize_model(model: Union[onnx.ModelProto, gs.Graph], skip_fusion_patterns: str = None) -> onnx.ModelProto:
