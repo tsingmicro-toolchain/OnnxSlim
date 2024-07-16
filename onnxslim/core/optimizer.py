@@ -912,6 +912,46 @@ def subexpression_elimination(graph):
         find_and_remove_replaceable_nodes(nodes)
 
 
+def tie_weights(graph, threshold=1*1024*1024):
+    """Tie weights in a computational graph to reduce the number of parameters."""
+
+    tensor_map = graph.tensors()
+    constant_tensors = [tensor for tensor in tensor_map.values() if isinstance(tensor, gs.Constant)]
+
+    sub_graphs = graph.subgraphs(recursive=True)
+    sub_graphs_constant_tensors = [
+        [tensor for name, tensor in sub_graph.tensors().items() if isinstance(tensor, gs.Constant)]
+        for sub_graph in sub_graphs
+    ]
+
+    constant_tensors.extend([tensor for tensors in sub_graphs_constant_tensors for tensor in tensors])
+
+    def replace_constant_references(existing_constant, to_be_removed_constant):
+        users = to_be_removed_constant.outputs
+        for user in users:
+            for idx, inp in enumerate(user.inputs):
+                if inp in to_be_removed_constant.outputs:
+                    index = user.inputs.index(inp)
+                    user.inputs.pop(index)
+                    user.inputs.insert(index, existing_constant)
+
+        to_be_removed_constant.inputs.clear()
+        to_be_removed_constant.outputs.clear()
+
+    filtered_constant_tensors = [tensor for tensor in constant_tensors if tensor.values.size > threshold]
+
+    if len(filtered_constant_tensors) > 1:
+        keep_constants = [True] * len(filtered_constant_tensors)
+        for i, constant_tensor in enumerate(filtered_constant_tensors):
+            if keep_constants[i]:
+                for j in range(i + 1, len(filtered_constant_tensors)):
+                    if keep_constants[j]:
+                        if constant_tensor == filtered_constant_tensors[j]:
+                            keep_constants[j] = False
+                            replace_constant_references(constant_tensor, filtered_constant_tensors[j])
+                            logger.debug(f"Constant {filtered_constant_tensors[j].name} can be replaced by {constant_tensor.name}")
+
+
 def optimize_model(model: Union[onnx.ModelProto, gs.Graph], skip_fusion_patterns: str = None) -> onnx.ModelProto:
     """Optimize and transform the given ONNX model using various fusion patterns and graph rewriting techniques."""
     graph = model if isinstance(model, gs.Graph) else gs.import_onnx(model)
@@ -924,6 +964,7 @@ def optimize_model(model: Union[onnx.ModelProto, gs.Graph], skip_fusion_patterns
     graph.cleanup(remove_unused_graph_inputs=True).toposort()
     subexpression_elimination(graph)
     graph.cleanup(remove_unused_graph_inputs=True).toposort()
+    tie_weights(graph)
     model = gs.export_onnx(graph)
 
     return model

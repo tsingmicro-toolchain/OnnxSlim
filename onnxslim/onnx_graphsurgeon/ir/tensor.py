@@ -474,8 +474,11 @@ class Constant(Tensor):
         return ret
 
     def __eq__(self, other):
-        """Perform a check to see if two variables are equal."""
+        """Perform a check to see if two constants are equal."""
         if not isinstance(other, Constant):
+            return False
+
+        if self._values.shape != other._values.shape:
             return False
 
         return (
