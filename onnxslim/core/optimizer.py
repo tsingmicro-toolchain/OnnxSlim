@@ -109,12 +109,12 @@ def check_shape(shapes):
     return string_count == 1 and non_negative_int_count == len(shapes) - 1
 
 
-def graph_constant_fold_inplace(graph):
+def dead_node_elimination(graph):
     """Perform in-place constant folding optimizations on the given computational graph by eliminating redundant
     nodes.
     """
     for subgraph in graph.subgraphs():
-        graph_constant_fold_inplace(subgraph)
+        dead_node_elimination(subgraph)
 
     for node in graph.nodes:
         if node.op in {"Identity", "Dropout"}:
@@ -161,9 +161,14 @@ def graph_constant_fold_inplace(graph):
                 isinstance(node.inputs[0], Constant) and isinstance(node.inputs[1], Variable)
             ):
                 idx, constant_variable = get_constant_variable(node, return_idx=True)
-                if np.all(constant_variable.values == 0) and (node.inputs[0].shape == node.inputs[1].shape):
-                    idx = 0 if idx == 1 else 1
-                    delete_node(node, idx)
+                value = constant_variable.values
+                var_idx = 0 if idx == 1 else 1
+                if value.ndim == 0 and value == 0:
+                    delete_node(node, var_idx)
+                    logger.debug(f"removing Add op: {node.name}")
+                elif np.all(value == 0) and (node.inputs[0].shape == node.inputs[1].shape):
+                    var_idx = 0 if idx == 1 else 1
+                    delete_node(node, var_idx)
                     logger.debug(f"removing Add op: {node.name}")
         elif node.op == "Expand":
             # tests/test_onnx_nets.py::TestTimmClass::test_timm[lambda_resnet26rpt_256]
@@ -178,6 +183,16 @@ def graph_constant_fold_inplace(graph):
                 for input in node.inputs:
                     if isinstance(input, Constant) and input.values.size == 0:
                         node.inputs.remove(input)
+        elif node.op == "Sub":
+            if (isinstance(node.inputs[1], Constant) and isinstance(node.inputs[0], Variable)):
+                constant_variable = node.inputs[1]
+                value = constant_variable.values
+                if value.ndim == 0 and value == 0:
+                    delete_node(node)
+                    logger.debug(f"removing Sub op: {node.name}")
+                elif np.all(value == 0) and (node.inputs[0].shape == value.shape):
+                    delete_node(node)
+                    logger.debug(f"removing Sub op: {node.name}")
 
 
 class PadConvMatcher(PatternMatcher):
@@ -876,7 +891,9 @@ def sequences_equal(seq1, seq2):
 def can_be_replaced(node, other_node):
     """Check if two nodes can be replaced based on their operations, attributes, and inputs."""
     attrs_match = node.op == other_node.op and node.attrs == other_node.attrs
-    inputs_match = sequences_equal(node.inputs, other_node.inputs)
+    node_input = [input for input in node.inputs if not input.is_empty()]
+    other_node_input = [input for input in other_node.inputs if not input.is_empty()]
+    inputs_match = sequences_equal(node_input, other_node_input)
 
     return attrs_match and inputs_match
 
@@ -903,7 +920,7 @@ def optimize_model(model: Union[onnx.ModelProto, gs.Graph], skip_fusion_patterns
     for match in fusion_pairs.values():
         graph.replace_custom_layer(**match)
     graph.cleanup(remove_unused_graph_inputs=True).toposort()
-    graph_constant_fold_inplace(graph)
+    dead_node_elimination(graph)
     graph.cleanup(remove_unused_graph_inputs=True).toposort()
     subexpression_elimination(graph)
     graph.cleanup(remove_unused_graph_inputs=True).toposort()
