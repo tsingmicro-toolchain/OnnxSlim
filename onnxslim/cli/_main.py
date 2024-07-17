@@ -260,6 +260,10 @@ def main():
     if not args.inspect and args.dump_to_disk:
         parser.error("dump_to_disk can only be used with --inspect")
 
+    if not args.no_shape_infer or args.no_constant_folding:
+        from onnxslim.utils import check_onnx_compatibility
+        check_onnx_compatibility()
+
     slim(
         args.input_model,
         args.output_model,
