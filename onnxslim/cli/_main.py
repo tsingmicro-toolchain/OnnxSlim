@@ -262,6 +262,7 @@ def main():
 
     if not args.no_shape_infer or args.no_constant_folding:
         from onnxslim.utils import check_onnx_compatibility
+
         check_onnx_compatibility()
 
     slim(
