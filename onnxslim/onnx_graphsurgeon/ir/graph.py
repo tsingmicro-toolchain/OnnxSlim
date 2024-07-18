@@ -546,11 +546,6 @@ class Graph(object):
             from onnxslim.onnx_graphsurgeon.ir.function import Function
 
             visited = misc.default_value(visited, set())
-            if get_id(node_or_func) in visited and len(node_or_func.outputs) == 1:
-                if isinstance(node_or_func, Function):
-                    G_LOGGER.critical("Cycle detected in function definitions!")
-
-                G_LOGGER.critical("Cycle detected in graph! Are there tensors with duplicate names in the graph?")
             visited.add(get_id(node_or_func))
 
             def get_inputs(node_or_func):
