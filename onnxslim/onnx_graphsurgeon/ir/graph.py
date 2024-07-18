@@ -543,7 +543,6 @@ class Graph(object):
 
         def get_hierarchy_level(node_or_func, visited=None):
             """Returns the hierarchy level of a node or function, with optional tracking of visited elements."""
-            from onnxslim.onnx_graphsurgeon.ir.function import Function
 
             visited = misc.default_value(visited, set())
             visited.add(get_id(node_or_func))
