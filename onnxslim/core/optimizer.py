@@ -976,7 +976,6 @@ def optimize_model(model: Union[onnx.ModelProto, gs.Graph], skip_fusion_patterns
     graph.cleanup(remove_unused_graph_inputs=True).toposort()
     subexpression_elimination(graph)
     graph.cleanup(remove_unused_graph_inputs=True).toposort()
-    tie_weights(graph)
     model = gs.export_onnx(graph)
 
     return model
