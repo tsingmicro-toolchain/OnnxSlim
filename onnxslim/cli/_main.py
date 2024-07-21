@@ -121,7 +121,8 @@ def slim(
         while MAX_ITER > 0:
             logger.debug(f"iter: {MAX_ITER}")
             model = optimize(model, skip_fusion_patterns)
-            model = shape_infer(model)
+            if not no_shape_infer:
+                model = shape_infer(model)
             graph = check_point(model)
             if graph == graph_check_point:
                 logger.debug(f"converged at iter: {MAX_ITER}")
