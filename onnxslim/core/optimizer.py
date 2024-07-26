@@ -106,7 +106,7 @@ def check_shape(shapes):
         elif isinstance(item, int) and item > 0:
             non_negative_int_count += 1
 
-    return string_count == 1 and non_negative_int_count == len(shapes) - 1
+    return (string_count == 1 and non_negative_int_count == len(shapes) - 1) or non_negative_int_count == len(shapes)
 
 
 def dead_node_elimination(graph):
