@@ -8,10 +8,10 @@ import numpy as np
 import onnx
 from onnx import checker
 
-import onnxslim.onnx_graphsurgeon as gs
+import onnxslim.third_party.onnx_graphsurgeon as gs
 from onnxslim.misc.font import GREEN, WHITE
 from onnxslim.misc.tabulate import SEPARATING_LINE, tabulate
-from onnxslim.onnx_graphsurgeon.logger.logger import G_LOGGER
+from onnxslim.third_party.onnx_graphsurgeon.logger.logger import G_LOGGER
 
 # Configure logging
 logging.basicConfig(

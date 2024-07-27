@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 
 from onnxslim import register_fusion_pattern, slim
-from onnxslim.core.graph_rewriter import Pattern, PatternGenerator, PatternMatcher
+from onnxslim.core.pattern import Pattern, PatternGenerator, PatternMatcher
 
 
 class TestPatternGenerator:

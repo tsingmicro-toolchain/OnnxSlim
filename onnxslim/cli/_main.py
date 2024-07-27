@@ -60,7 +60,7 @@ def slim(
     import time
     from pathlib import Path
 
-    from onnxslim.core.slim import (
+    from onnxslim.core import (
         convert_data_format,
         freeze,
         input_shape_modification,
