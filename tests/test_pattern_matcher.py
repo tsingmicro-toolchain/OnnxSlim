@@ -207,6 +207,30 @@ class TestPatternMatcher:
         print_model_info_as_table(request.node.name, [summary])
         assert summary["op_type_counts"]["ReduceSum"] == 1
 
+    def test_consecutive_unsqueeze(self, request):
+        class Model(nn.Module):
+            def __init__(self):
+                super(Model, self).__init__()
+
+            def forward(self, x):
+                x = x.unsqueeze(-1)
+                x = x.unsqueeze(-1)
+                x = x.unsqueeze(1)
+                x = x.unsqueeze(0)
+                return x
+
+        input = torch.randn(3, 4)
+        m = Model()
+        directory = f"tmp/{request.node.name}"
+        os.makedirs(directory, exist_ok=True)
+
+        filename = f"{directory}/{request.node.name}.onnx"
+        torch.onnx.export(m, input, filename, opset_version=11)
+
+        summary = summarize_model(slim(filename))
+        print_model_info_as_table(request.node.name, [summary])
+        assert summary["op_type_counts"]["Unsqueeze"] == 1
+
 
 if __name__ == "__main__":
     pytest.main(
