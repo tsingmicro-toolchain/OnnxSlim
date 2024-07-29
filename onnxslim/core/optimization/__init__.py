@@ -7,7 +7,7 @@ from onnxslim.third_party.onnx_graphsurgeon.ir.graph import Graph
 from onnxslim.core.pattern import get_node_feeds
 from onnxslim.core.pattern.registry import get_fusion_patterns
 from onnxslim.utils import logger
-from .dead_node_elimination import dead_node_elimination, delete_node
+from .dead_node_elimination import dead_node_elimination
 from .subexpression_elimination import subexpression_elimination
 
 

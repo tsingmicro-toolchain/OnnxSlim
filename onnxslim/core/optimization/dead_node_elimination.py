@@ -2,7 +2,7 @@ import numpy as np
 import onnxslim.third_party.onnx_graphsurgeon as gs
 from onnxslim.third_party.onnx_graphsurgeon.ir.tensor import Constant, Variable
 from onnxslim.third_party.onnx_graphsurgeon.exporters.onnx_exporter import dtype_to_onnx
-from onnxslim.core.pattern import get_node_users
+from onnxslim.core.utils import delete_node
 
 from onnxslim.utils import logger
 
@@ -128,22 +128,3 @@ def get_constant_variable(node, return_idx=False):
     for idx, input in enumerate(list(node.inputs)):
         if isinstance(input, Constant):
             return (idx, input) if return_idx else input
-
-
-def delete_node(node, input_var_idx=0, output_var_idx=0):
-    """Delete a node from the computation graph while re-linking its input and output to maintain graph integrity."""
-    input_variable = node.inputs[input_var_idx]
-    node_variable = node.outputs[output_var_idx]
-    next_nodes = get_node_users(node)
-    if next_nodes:
-        for next_node in next_nodes:
-            if isinstance(next_node, Variable) and next_node.is_output:
-                continue
-            index = next_node.inputs.index(node_variable)
-            next_node.inputs.pop(index)
-            next_node.inputs.insert(index, input_variable)
-    else:
-        input_node = node.i()
-        input_node.outputs.remove(node.inputs[input_var_idx])
-        input_node.outputs.append(node.outputs[output_var_idx])
-        node.outputs.clear()
