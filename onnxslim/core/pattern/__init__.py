@@ -142,7 +142,7 @@ class PatternMatcher:
 
                 node_feeds = get_node_feeds(node)
                 if pattern_node.coarse_input_num:
-                    if len(node_feeds) <= len(pattern_node.input_names):
+                    if len(node_feeds) < len(pattern_node.input_names):
                         return False
                 else:
                     if len(node_feeds) != len(pattern_node.input_names):
