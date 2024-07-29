@@ -207,7 +207,8 @@ class TestPatternMatcher:
         print_model_info_as_table(request.node.name, [summary])
         assert summary["op_type_counts"]["ReduceSum"] == 1
 
-    def test_consecutive_unsqueeze(self, request):
+    @pytest.mark.parametrize("opset",(11,13,),)
+    def test_consecutive_unsqueeze(self, request, opset):
         class Model(nn.Module):
             def __init__(self):
                 super(Model, self).__init__()
@@ -225,7 +226,7 @@ class TestPatternMatcher:
         os.makedirs(directory, exist_ok=True)
 
         filename = f"{directory}/{request.node.name}.onnx"
-        torch.onnx.export(m, input, filename, opset_version=11)
+        torch.onnx.export(m, input, filename, opset_version=opset)
 
         summary = summarize_model(slim(filename))
         print_model_info_as_table(request.node.name, [summary])
