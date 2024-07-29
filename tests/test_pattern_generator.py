@@ -67,7 +67,7 @@ class TestPatternGenerator:
                 """Return the name of the matcher as 'FusionGelu'."""
                 return "FusionGelu"
 
-            def rewrite(self):
+            def rewrite(self, opset=11):
                 """Raise an exception indicating a pattern match in GeluMatcher."""
                 raise Exception("Pattern Matched")
 
