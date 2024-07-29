@@ -172,7 +172,7 @@ class PatternMatcher:
         return False
 
     @abstractmethod
-    def rewrite(self):
+    def rewrite(self, opset=11):
         """Abstract method to rewrite the graph based on matched patterns, to be implemented by subclasses."""
         raise NotImplementedError("rewrite method must be implemented")
 
