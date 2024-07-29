@@ -23,7 +23,7 @@ class ConvBatchNormMatcher(PatternMatcher):
         """Returns the name of the FusionConvBN pattern."""
         return "FusionConvBN"
 
-    def rewrite(self):
+    def rewrite(self, opset=11):
         """Rewrites the weights and biases of a BatchNormalization layer fused with a convolution layer."""
         match_case = {}
         conv_transpose_node = self.conv_0

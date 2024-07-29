@@ -23,7 +23,7 @@ class GeluPatternMatcher(PatternMatcher):
         """Returns the name of the fusion pattern, 'FusionGelu'."""
         return "FusionGelu"
 
-    def rewrite(self):
+    def rewrite(self, opset=11):
         """Rewrite the computation graph pattern to fuse GELU operations."""
         input_variable = self.div_0.inputs[0]
         mul_node = self.mul_0

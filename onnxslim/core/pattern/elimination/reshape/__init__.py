@@ -25,7 +25,7 @@ class ReshapePatternMatcher(PatternMatcher):
         """Returns the name 'EliminationReshape'."""
         return "EliminationReshape"
 
-    def rewrite(self):
+    def rewrite(self, opset=11):
         """Rewrite the computational graph by eliminating redundant reshape operations when certain conditions are
         met.
         """

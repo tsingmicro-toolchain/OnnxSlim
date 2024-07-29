@@ -22,7 +22,7 @@ class MatMulAddPatternMatcher(PatternMatcher):
         """Returns the name of the fusion pattern as a string 'FusionGemm'."""
         return "FusionGemm"
 
-    def rewrite(self):
+    def rewrite(self, opset=11):
         """Rewrites the graph for the fusion pattern 'FusionGemm' based on matching criteria and constant variables in
         matmul nodes.
         """

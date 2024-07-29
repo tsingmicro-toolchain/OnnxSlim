@@ -26,7 +26,7 @@ class PadConvMatcher(PatternMatcher):
         pad_node = self.pad_0
         return isinstance(pad_node.inputs[1], gs.Constant)
 
-    def rewrite(self):
+    def rewrite(self, opset=11):
         """Rewrites the padding parameter for a convolutional node to use a constant if the current parameter is not a
         constant.
         """

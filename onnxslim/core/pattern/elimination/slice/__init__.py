@@ -22,7 +22,7 @@ class SlicePatternMatcher(PatternMatcher):
         """Returns the name of the elimination pattern, 'EliminationSlice'."""
         return "EliminationSlice"
 
-    def rewrite(self):
+    def rewrite(self, opset=11):
         """Rewrites an elimination pattern for slice nodes by optimizing nested slice operations."""
         match_case = {}
         first_slice_node = self.slice_0

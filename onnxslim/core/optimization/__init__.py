@@ -58,7 +58,7 @@ def find_matches(graph: Graph, fusion_patterns: dict):
             for layer_type, pattern_matcher in fusion_patterns.items():
                 match = pattern_matcher.match(node)
                 if match:
-                    match_case = pattern_matcher.rewrite()
+                    match_case = pattern_matcher.rewrite(opset=graph.opset)
                     logger.debug(f"matched pattern {layer_type}")
                     for _, match in match_case.items():
                         if "op" not in match:
