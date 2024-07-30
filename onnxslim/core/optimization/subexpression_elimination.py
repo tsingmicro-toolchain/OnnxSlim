@@ -1,6 +1,5 @@
 from onnxslim.core.pattern import get_node_users
-from onnxslim.third_party.onnx_graphsurgeon.ir.tensor import Constant, Variable
-
+from onnxslim.third_party.onnx_graphsurgeon.ir.tensor import Variable
 from onnxslim.utils import logger
 
 
@@ -17,7 +16,7 @@ def find_and_remove_replaceable_nodes(nodes):
     def replace_node_references(existing_node, to_be_removed_node):
         users = get_node_users(to_be_removed_node)
         for user in users:
-            for idx, inp in enumerate(user.inputs):
+            for inp in user.inputs:
                 if inp in to_be_removed_node.outputs:
                     index = user.inputs.index(inp)
                     user.inputs.pop(index)
