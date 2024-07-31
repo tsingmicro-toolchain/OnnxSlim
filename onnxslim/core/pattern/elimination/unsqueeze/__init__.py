@@ -50,19 +50,27 @@ class UnsqueezePatternMatcher(PatternMatcher):
                     axis + sum(1 for axis_ in axes_node_unsqueeze_1 if axis_ <= axis) for axis in axes_node_unsqueeze_0
                 ]
 
-                inputs = list(node_unsqueeze_0.inputs)
+                inputs = [node_unsqueeze_0.inputs[0]]
                 outputs = list(node_unsqueeze_1.outputs)
                 node_unsqueeze_0.inputs.clear()
                 node_unsqueeze_0.outputs.clear()
                 node_unsqueeze_1.inputs.clear()
                 node_unsqueeze_1.outputs.clear()
 
+                if opset < 13:
+                    attrs = {"axes": axes_node_unsqueeze_0 + axes_node_unsqueeze_1}
+                else:
+                    attrs = None
+                    inputs.append(gs.Constant(name=f"{node_unsqueeze_0.name}_axes",
+                                  values=np.array(axes_node_unsqueeze_0 + axes_node_unsqueeze_1, dtype=np.int64)))
+
                 match_case[node_unsqueeze_0.name] = {
                     "op": "Unsqueeze",
                     "inputs": inputs,
                     "outputs": outputs,
                     "name": node_unsqueeze_0.name,
-                    "attrs": {"axes": axes_node_unsqueeze_0 + axes_node_unsqueeze_1},
+                    "attrs": attrs,
+                    "domain": None,
                 }
 
         return match_case
