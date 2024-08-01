@@ -481,6 +481,9 @@ class Constant(Tensor):
         if self._values.shape != other._values.shape:
             return False
 
+        if self._values.dtype != other._values.dtype:
+            return False
+
         return (
             self._values == other._values
             if isinstance(self._values, LazyValues) and isinstance(other._values, LazyValues)
