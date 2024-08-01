@@ -17,7 +17,7 @@ def tie_weights(graph):
     constant_tensors.extend([tensor for tensors in sub_graphs_constant_tensors for tensor in tensors])
 
     def replace_constant_references(existing_constant, to_be_removed_constant):
-        users = to_be_removed_constant.outputs
+        users = list(to_be_removed_constant.outputs)
         for user in users:
             for idx, inp in enumerate(user.inputs):
                 if (inp == to_be_removed_constant) and (inp.name == to_be_removed_constant.name):
