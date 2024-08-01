@@ -73,10 +73,10 @@ def dead_node_elimination(graph):
             if len(node.inputs) > 1 and isinstance(node.inputs[1], Constant):
                 constant_variable = node.inputs[1]
                 value = constant_variable.values
-                if value.ndim == 0 and value == 0:
+                if value.ndim == 0 and value == 1:
                     delete_node(node)
                     logger.debug(f"removing Expand op: {node.name}")
-                elif np.all(value == 0) and (node.inputs[0].shape == value.shape):
+                elif np.all(value == 1) and (node.inputs[0].shape == node.outputs[0].shape):
                     delete_node(node)
                     logger.debug(f"removing Expand op: {node.name}")
         elif node.op == "Concat":
@@ -94,7 +94,7 @@ def dead_node_elimination(graph):
                 if value.ndim == 0 and value == 0:
                     delete_node(node)
                     logger.debug(f"removing Sub op: {node.name}")
-                elif np.all(value == 0) and (node.inputs[0].shape == value.shape):
+                elif np.all(value == 0) and (node.inputs[0].shape == node.outputs[0].shape):
                     delete_node(node)
                     logger.debug(f"removing Sub op: {node.name}")
         elif node.op == "Div":
@@ -104,7 +104,7 @@ def dead_node_elimination(graph):
                 if value.ndim == 0 and value == 1:
                     delete_node(node)
                     logger.debug(f"removing Div op: {node.name}")
-                elif np.all(value == 1) and (node.inputs[0].shape == value.shape):
+                elif np.all(value == 1) and (node.inputs[0].shape == node.outputs[0].shape):
                     delete_node(node)
                     logger.debug(f"removing Div op: {node.name}")
 
