@@ -18,14 +18,12 @@ def tie_weights(graph):
 
     def replace_constant_references(existing_constant, to_be_removed_constant):
         users = list(to_be_removed_constant.outputs)
+
         for user in users:
             for idx, inp in enumerate(user.inputs):
                 if (inp == to_be_removed_constant) and (inp.name == to_be_removed_constant.name):
                     user.inputs.pop(idx)
                     user.inputs.insert(idx, existing_constant)
-
-        to_be_removed_constant.inputs.clear()
-        to_be_removed_constant.outputs.clear()
 
     if len(constant_tensors) > 1:
         keep_constants = [True] * len(constant_tensors)
