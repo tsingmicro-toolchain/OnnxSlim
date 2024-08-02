@@ -31,7 +31,7 @@ jobs:
       - name: model zoo test
         run: |
           python -m pip install --upgrade pip wheel setuptools
-          python tests/test_folder.py --model-dir /root/data/modelzoo
+          pytest tests/test_modelzoo.py
 
       - name: pattern matcher test
         run: |
