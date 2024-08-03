@@ -314,8 +314,11 @@ def get_opset(model: onnx.ModelProto) -> int:
         return None
 
 
-def summarize_model(model: onnx.ModelProto) -> Dict:
+def summarize_model(model: Union[str, onnx.ModelProto]) -> Dict:
     """Generates a summary of the ONNX model, including model size, operations, and tensor shapes."""
+    if isinstance(model, str):
+        model = onnx.load(model)
+
     logger.debug("Start summarizing model.")
     model_info = {}
 

@@ -14,12 +14,9 @@ class TestModelZoo:
     def test_silero_vad(self, request):
         name = request.node.originalname[len("test_"):]
         filename = f"{MODELZOO_PATH}/{name}/{name}.onnx"
-        summary = summarize_model(slim(filename))
-        print_model_info_as_table(request.node.name, [summary])
 
         with tempfile.TemporaryDirectory() as tempdir:
-            slim(filename, os.path.join(tempdir, f"{name}_slim.onnx"))
-
+            slim(filename, os.path.join(tempdir, f"{name}_slim.onnx")) 
             batch_size = 2
             input = np.zeros((batch_size, 256), dtype=np.float32)
             sr = np.array(16000)
@@ -32,12 +29,9 @@ class TestModelZoo:
     def test_decoder_with_past_model(self, request):
         name = request.node.originalname[len("test_"):]
         filename = f"{MODELZOO_PATH}/{name}/{name}.onnx"
-        summary = summarize_model(slim(filename))
-        print_model_info_as_table(request.node.name, [summary])
 
         with tempfile.TemporaryDirectory() as tempdir:
             slim(filename, os.path.join(tempdir, f"{name}_slim.onnx"))
-
             batch_size = 2
             input_ids = np.ones((batch_size, 256), dtype=np.int64)
             encoder_hidden_states = np.zeros((batch_size, 128, 16), dtype=np.float32)
@@ -49,8 +43,6 @@ class TestModelZoo:
     def test_tiny_en_decoder(self, request):
         name = request.node.originalname[len("test_"):]
         filename = f"{MODELZOO_PATH}/{name}/{name}.onnx"
-        summary = summarize_model(slim(filename))
-        print_model_info_as_table(request.node.name, [summary])
 
         with tempfile.TemporaryDirectory() as tempdir:
             slim(filename, os.path.join(tempdir, f"{name}_slim.onnx"), model_check=True)
