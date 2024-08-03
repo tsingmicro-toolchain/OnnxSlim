@@ -88,7 +88,6 @@ def slim(
         model_name = Path(model).name
         model = onnx.load(model)
     else:
-        model = model
         model_name = "ONNX_Model"
 
     freeze(model)
