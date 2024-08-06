@@ -140,11 +140,10 @@ def slim(
 
     if not output_model:
         return model
+
     slimmed_info = summarize_model(model)
-    save(model, output_model, model_check, save_as_external_data)
-    if slimmed_info["model_size"] >= onnx.checker.MAXIMUM_PROTOBUF or save_as_external_data:
-        model_size = model.ByteSize()
-        slimmed_info["model_size"] = [model_size, slimmed_info["model_size"]]
+    save(model, output_model, model_check, save_as_external_data, slimmed_info)
+
     end_time = time.time()
     elapsed_time = end_time - start_time
 

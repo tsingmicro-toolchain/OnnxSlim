@@ -429,7 +429,8 @@ def is_converged(model: onnx.ModelProto, graph_ckpt, iter: int) -> bool:
         return False
 
 
-def save(model: onnx.ModelProto, model_path: str, model_check: bool = False, save_as_external_data: bool = False):
+def save(model: onnx.ModelProto, model_path: str, model_check: bool = False,
+         save_as_external_data: bool = False, model_info: Dict = None):
     """Save an ONNX model to a specified path, with optional model checking for validity."""
     if model_check:
         try:
@@ -454,6 +455,10 @@ def save(model: onnx.ModelProto, model_path: str, model_check: bool = False, sav
                 location=location,
             )
             logger.debug("Model too large and saved as external data automatically.")
+
+            if model_info:
+                model_size = model.ByteSize()
+                model_info["model_size"] = [model_size, model_info["model_size"]]
 
 
 def check_result(raw_onnx_output, slimmed_onnx_output):
