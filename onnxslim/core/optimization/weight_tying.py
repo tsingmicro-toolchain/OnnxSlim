@@ -1,4 +1,5 @@
-from onnxslim.utils import logger
+import logging
+logger = logging.getLogger('onnxslim')
 import onnxslim.third_party.onnx_graphsurgeon as gs
 
 

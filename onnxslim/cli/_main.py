@@ -2,8 +2,6 @@ from typing import Union
 
 import onnx
 
-from onnxslim.utils import logger
-
 
 def slim(
     model: Union[str, onnx.ModelProto],
@@ -80,7 +78,7 @@ def slim(
         summarize_model,
     )
 
-    init_logging(verbose)
+    logger = init_logging(verbose)
 
     MAX_ITER = int(os.getenv("ONNXSLIM_MAX_ITER")) if os.getenv("ONNXSLIM_MAX_ITER") else 10
 
@@ -250,7 +248,7 @@ def main():
     args, unknown = parser.parse_known_args()
 
     if unknown:
-        logger.error(f"unrecognized options: {unknown}")
+        parser.error(f"unrecognized options: {unknown}")
         return 1
 
     if args.inspect and args.output_model:

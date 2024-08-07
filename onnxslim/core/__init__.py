@@ -1,4 +1,5 @@
 import os
+import logging
 import tempfile
 
 import numpy as np
@@ -10,7 +11,9 @@ from onnxslim.core.optimization import optimize_model
 from onnxslim.core.utils import delete_node
 from onnxslim.third_party.onnx_graphsurgeon.ir.tensor import Constant
 from onnxslim.third_party.symbolic_shape_infer import SymbolicShapeInference
-from onnxslim.utils import logger, save
+from onnxslim.utils import save
+logger = logging.getLogger('onnxslim')
+
 
 DEBUG = bool(os.getenv("ONNXSLIM_DEBUG"))
 AUTO_MERGE = True if os.getenv("ONNXSLIM_AUTO_MERGE") is None else bool(int(os.getenv("ONNXSLIM_AUTO_MERGE")))

@@ -12,44 +12,33 @@ import onnxslim.third_party.onnx_graphsurgeon as gs
 from onnxslim.misc.font import GREEN, WHITE
 from onnxslim.misc.tabulate import SEPARATING_LINE, tabulate
 from onnxslim.third_party.onnx_graphsurgeon.logger.logger import G_LOGGER
-
-# Configure logging
-logging.basicConfig(
-    level=logging.ERROR,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-    handlers=[logging.StreamHandler()],
-)
-
-# Create a logger
-logger = logging.getLogger("onnxslim")
+logger = logging.getLogger('onnxslim')
 
 
 def init_logging(verbose=False):
     """Configure the logging settings for the application based on the verbosity level."""
-    for handler in logging.root.handlers[:]:
-        logging.root.removeHandler(handler)
+    logger = logging.getLogger("onnxslim")
 
     if verbose:  # DEBUG
-        logging.basicConfig(
-            level=logging.DEBUG,
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[logging.StreamHandler(sys.stderr)],
-        )
+        logger.setLevel(logging.DEBUG)
         G_LOGGER.severity = logging.DEBUG
     else:  # ERROR
-        logging.basicConfig(
-            level=logging.ERROR,
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[logging.StreamHandler(sys.stderr)],
-        )
+        logger.setLevel(logging.ERROR)
         G_LOGGER.severity = logging.ERROR
+
+    if not logger.handlers:
+        handler = logging.StreamHandler(sys.stderr)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
 
     G_LOGGER.colors = False
 
     import onnxruntime as ort
 
     ort.set_default_logger_severity(3)
+
+    return logger
 
 
 def format_bytes(size: Union[int, Tuple[int, ...]]) -> str:

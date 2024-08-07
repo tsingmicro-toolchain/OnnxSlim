@@ -1,6 +1,7 @@
+import logging
 from onnxslim.core.pattern import get_node_users
 from onnxslim.third_party.onnx_graphsurgeon.ir.tensor import Variable
-from onnxslim.utils import logger
+logger = logging.getLogger('onnxslim')
 
 
 def find_and_remove_replaceable_nodes(nodes):
