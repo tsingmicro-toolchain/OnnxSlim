@@ -1,27 +1,73 @@
+import onnxslim
 import argparse
+import dataclasses
 from dataclasses import dataclass, field
 from typing import List, Optional, Type
 
 
 @dataclass
 class ModelArguments:
+    """
+    Args:
+        model (Union[str, onnx.ModelProto]): The ONNX model to be slimmed. It can be either a file path or an `onnx.ModelProto` object.
+
+        output_model (str, optional): File path to save the slimmed model. If None, the model will not be saved.
+    """
     input_model: str = field(metadata={"help": "input onnx model"})
     output_model: Optional[str] = field(default=None, metadata={"help": "output onnx model"})
-    model_check: bool = field(default=False, metadata={"help": "enable model check"})
 
 
 @dataclass
 class OptimizationArguments:
-    input_shapes: Optional[List[str]] = field(default=None, metadata={"help": "input shape of the model, INPUT_NAME:SHAPE, e.g. x:1,3,224,224 or x1:1,3,224,224 x2:1,3,224,224"})
-    outputs: Optional[List[str]] = field(default=None, metadata={"help": "output of the model, OUTPUT_NAME:DTYPE, e.g. y:fp32 or y1:fp32 y2:fp32. If dtype is not specified, the dtype of the output will be the same as the original model if it has dtype, otherwise it will be fp32, available dtype: fp16, fp32, int32"})
+    """
+    Args:
+        no_shape_infer (bool, optional): Flag indicating whether to perform shape inference. Default is False.
+
+        no_constant_folding (bool, optional): Flag indicating whether to perform constant folding. Default is False.
+
+        skip_fusion_patterns (str, optional): String representing fusion patterns to skip. Default is None.
+    """
     no_shape_infer: bool = field(default=False, metadata={"help": "whether to disable shape_infer, default false."})
     no_constant_folding: bool = field(default=False, metadata={"help": "whether to disable constant_folding, default false."})
+    skip_fusion_patterns: Optional[List[str]] = field(default=None, metadata={"help": "whether to skip the fusion of some patterns", "choices": list(onnxslim.DEFAULT_FUSION_PATTERNS.keys())})
+
+
+@dataclass
+class ModificationArguments:
+    """
+    Args:
+        input_shapes (str, optional): String representing the input shapes. Default is None.
+
+        outputs (str, optional): String representing the outputs. Default is None.
+
+        dtype (str, optional): Data type. Default is None.
+
+        save_as_external_data (bool, optional): Flag indicating whether to split onnx as model and weight. Default is False.
+    """
+    input_shapes: Optional[List[str]] = field(default=None, metadata={"help": "input shape of the model, INPUT_NAME:SHAPE, e.g. x:1,3,224,224 or x1:1,3,224,224 x2:1,3,224,224"})
+    outputs: Optional[List[str]] = field(default=None, metadata={"help": "output of the model, OUTPUT_NAME:DTYPE, e.g. y:fp32 or y1:fp32 y2:fp32. If dtype is not specified, the dtype of the output will be the same as the original model if it has dtype, otherwise it will be fp32, available dtype: fp16, fp32, int32"})
     dtype: Optional[str] = field(default=None, metadata={"help": "convert data format to fp16 or fp32.", "choices": ["fp16", "fp32"]})
-    skip_fusion_patterns: Optional[List[str]] = field(default=None, metadata={"help": "whether to skip the fusion of some patterns"})
+    save_as_external_data: bool = field(default=False, metadata={"help": "split onnx as model and weight, default False."})
+
+
+@dataclass
+class CheckerArguments:
+    """
+    Args:
+        model_check (bool, optional): Flag indicating whether to perform model checking. Default is False.
+
+        model_check_inputs (str, optional): The shape or tensor used for model check. Default is None.
+
+        inspect (bool, optional): Flag indicating whether to inspect the model. Default is False.
+
+        dump_to_disk (bool, optional): Flag indicating whether to dump the model detail to disk. Default is False.
+
+        verbose (bool, optional): Flag indicating whether to print verbose logs. Default is False.
+    """
+    model_check: bool = field(default=False, metadata={"help": "enable model check"})
+    model_check_inputs: Optional[List[str]] = field(default=None, metadata={"help": "Works only when model_check is enabled, Input shape of the model or numpy data path, INPUT_NAME:SHAPE or INPUT_NAME:DATAPATH, e.g. x:1,3,224,224 or x1:1,3,224,224 x2:data.npy. Useful when input shapes are dynamic."})
     inspect: bool = field(default=False, metadata={"help": "inspect model, default False."})
     dump_to_disk: bool = field(default=False, metadata={"help": "dump model info to disk, default False."})
-    save_as_external_data: bool = field(default=False, metadata={"help": "split onnx as model and weight, default False."})
-    model_check_inputs: Optional[List[str]] = field(default=None, metadata={"help": "Works only when model_check is enabled, Input shape of the model or numpy data path, INPUT_NAME:SHAPE or INPUT_NAME:DATAPATH, e.g. x:1,3,224,224 or x1:1,3,224,224 x2:data.npy. Useful when input shapes are dynamic."})
     verbose: bool = field(default=False, metadata={"help": "verbose mode, default False."})
 
 
@@ -68,11 +114,11 @@ class ArgumentParser:
         args = self.parser.parse_args()
         args_dict = vars(args)
 
-        # Handle positional arguments separately
-        input_model = args_dict.pop('input_model')
-        output_model = args_dict.pop('output_model')
+        outputs = []
+        for dtype in self.argument_dataclasses:
+            keys = {f.name for f in dataclasses.fields(dtype) if f.init}
+            inputs = {k: v for k, v in args_dict.items() if k in keys}
+            obj = dtype(**inputs)
+            outputs.append(obj)
 
-        model_args = ModelArguments(input_model=input_model, output_model=output_model, **{k: v for k, v in args_dict.items() if k in ModelArguments.__dataclass_fields__})
-        optimization_args = OptimizationArguments(**{k: v for k, v in args_dict.items() if k in OptimizationArguments.__dataclass_fields__})
-
-        return model_args, optimization_args
+        return (*outputs,)
