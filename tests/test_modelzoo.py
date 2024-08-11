@@ -52,7 +52,7 @@ class TestModelZoo:
         name = request.node.originalname[len("test_"):]
         filename = f"{MODELZOO_PATH}/{name}/{name}.onnx"
         summary = summarize_model(slim(filename))
-        print_model_info_as_table(request.node.name, [summary])
+        print_model_info_as_table(request.node.name, summary)
         assert summary["op_type_counts"]["Mul"] == 57
         assert summary["op_type_counts"]["Div"] == 53
 
@@ -61,7 +61,7 @@ class TestModelZoo:
         name = request.node.originalname[len("test_"):]
         filename = f"{MODELZOO_PATH}/{name}/{name}.onnx"
         summary = summarize_model(slim(filename))
-        print_model_info_as_table(request.node.name, [summary])
+        print_model_info_as_table(request.node.name, summary)
         assert summary["op_type_counts"]["Range"] == 0
         assert summary["op_type_counts"]["Floor"] == 0
         assert summary["op_type_counts"]["Concat"] == 54
