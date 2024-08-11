@@ -167,6 +167,8 @@ def onnxruntime_inference(model: onnx.ModelProto, input_data: dict) -> Dict[str,
 def print_model_info_as_table(model_name: str, model_info_list: List[Dict], elapsed_time: float = None):
     """Prints the model information as a formatted table for the given model name and list of model details."""
     assert model_info_list, "model_info_list must contain more than one model info"
+    if not isinstance(model_info_list, list):
+        model_info_list = [model_info_list]
 
     final_op_info = []
     if len(model_info_list) == 1:
@@ -194,6 +196,8 @@ def print_model_info_as_table(model_name: str, model_info_list: List[Dict], elap
         input_info_list = [f"IN: {inputs}"]
         for model_info in model_info_list:
             inputs_shape = model_info["op_input_info"].get(inputs, "")
+            if isinstance(inputs_shape, list):
+                inputs_shape = ": ".join([str(i) for i in inputs_shape])
             input_info_list.append(inputs_shape)
         final_op_info.append(input_info_list)
 
@@ -203,6 +207,8 @@ def print_model_info_as_table(model_name: str, model_info_list: List[Dict], elap
         output_info_list = [f"OUT: {outputs}"]
         for model_info in model_info_list:
             outputs_shape = model_info["op_output_info"].get(outputs, "")
+            if isinstance(outputs_shape, list):
+                inputs_shape = ": ".join([str(i) for i in outputs_shape])
             output_info_list.append(outputs_shape)
         final_op_info.append(output_info_list)
 
@@ -338,9 +344,9 @@ def summarize_model(model: Union[str, onnx.ModelProto]) -> Dict:
         for input in inputs:
             type_str, shape = get_tensor_dtype_shape(input)
             if shape:
-                op_shape_info[input.name] = f"{str(type_str)}: {tuple(shape)}"
+                op_shape_info[input.name] = (type_str, tuple(shape))
             else:
-                op_shape_info[input.name] = f"{str(type_str)}: None"
+                op_shape_info[input.name] = (type_str, None)
 
         return op_shape_info
 
