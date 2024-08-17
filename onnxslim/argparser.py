@@ -109,6 +109,7 @@ class ArgumentParser:
         # Add positional arguments separately for ModelArguments
         self.parser.add_argument("input_model", help="input onnx model")
         self.parser.add_argument("output_model", nargs="?", default=None, help="output onnx model")
+        self.parser.add_argument("-v", "--version", action="version", version=onnxslim.__version__)
 
     def parse_args_into_dataclasses(self):
         args = self.parser.parse_args()
