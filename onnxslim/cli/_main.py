@@ -2,11 +2,7 @@ from typing import Union
 
 import onnx
 
-def slim(
-    model: Union[str, onnx.ModelProto],
-    *args,
-    **kwargs
-):
+def slim(model: Union[str, onnx.ModelProto], *args, **kwargs):
 
     import os
     import time
@@ -55,7 +51,7 @@ def slim(
         model_name = Path(model).name
         model = onnx.load(model)
     else:
-        model_name = "ONNX_Model"
+        model_name = "OnnxModel"
 
     freeze(model)
 
