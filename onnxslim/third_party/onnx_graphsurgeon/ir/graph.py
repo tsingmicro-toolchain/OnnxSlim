@@ -796,7 +796,7 @@ class Graph(object):
                     elif isinstance(attr_val, Constant):
                         arr = attr_val._values  # Using ._values avoids copying
                     else:
-                        arr = np.array(attr_val)
+                        arr = np.array(attr_val, dtype=tensor.dtype)
                     tensor.to_constant(arr)
                     tensor.inputs.clear()
 
