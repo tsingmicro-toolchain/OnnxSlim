@@ -45,6 +45,7 @@ class ModificationArguments:
         save_as_external_data (bool, optional): Flag indicating whether to split onnx as model and weight. Default is False.
     """
     input_shapes: Optional[List[str]] = field(default=None, metadata={"help": "input shape of the model, INPUT_NAME:SHAPE, e.g. x:1,3,224,224 or x1:1,3,224,224 x2:1,3,224,224"})
+    inputs: Optional[List[str]] = field(default=None, metadata={"help": "input of the model, INPUT_NAME:DTYPE, e.g. y:fp32 or y1:fp32 y2:fp32. If dtype is not specified, the dtype of the input will be the same as the original model if it has dtype, otherwise it will be fp32, available dtype: fp16, fp32, int32"})
     outputs: Optional[List[str]] = field(default=None, metadata={"help": "output of the model, OUTPUT_NAME:DTYPE, e.g. y:fp32 or y1:fp32 y2:fp32. If dtype is not specified, the dtype of the output will be the same as the original model if it has dtype, otherwise it will be fp32, available dtype: fp16, fp32, int32"})
     dtype: Optional[str] = field(default=None, metadata={"help": "convert data format to fp16 or fp32.", "choices": ["fp16", "fp32"]})
     save_as_external_data: bool = field(default=False, metadata={"help": "split onnx as model and weight, default False."})
@@ -86,7 +87,7 @@ class ArgumentParser:
                 arg_type = field_def.type
                 default_value = field_def.default if field_def.default is not field_def.default_factory else None
                 help_text = field_def.metadata.get("help", "")
-                nargs = "+" if arg_type == List[str] else None
+                nargs = "+" if arg_type == Optional[List[str]] else None
                 choices = field_def.metadata.get("choices", None)
 
                 if arg_type == bool:
@@ -99,7 +100,7 @@ class ArgumentParser:
                 else:
                     self.parser.add_argument(
                         f"--{field_name.replace('_', '-')}",
-                        type=arg_type if arg_type != Optional[str] else str,
+                        type=arg_type if arg_type != Optional[List[str]] else str,
                         default=default_value,
                         nargs=nargs,
                         choices=choices,
