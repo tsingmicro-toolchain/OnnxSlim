@@ -175,9 +175,9 @@ def find_conv_nodes(node, opset):
         if node.i(0).op == "Pad":
             pad_node = node.i(0)
             if isinstance(pad_node.inputs[1], Constant):
+                pad_node_users = get_node_users(pad_node)
                 pad_value = pad_node.inputs[1].values.tolist()
                 input_variable = node.i(0).inputs[0]
-                input_variable.outputs.remove(pad_node)
 
                 pad_variable = node.i(0).outputs[0]  # pad output variable
                 index = node.inputs.index(pad_variable)
@@ -190,8 +190,10 @@ def find_conv_nodes(node, opset):
 
                 node.inputs.clear()
                 node.outputs.clear()
-                pad_node.inputs.clear()
-                pad_node.outputs.clear()
+                if len(pad_node_users) == 1:  # remove pad node if it has only one user
+                    pad_node.inputs.clear()
+                    pad_node.outputs.clear()
+
                 conv_pads = attrs["pads"]
                 len_conv_pads = int(len(conv_pads) / 2)
 
