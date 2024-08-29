@@ -13,6 +13,7 @@ def slim(model: Union[str, onnx.ModelProto], *args, **kwargs):
         freeze,
         input_shape_modification,
         optimize,
+        input_modification,
         output_modification,
         shape_infer,
     )
@@ -28,19 +29,20 @@ def slim(model: Union[str, onnx.ModelProto], *args, **kwargs):
         summarize_model,
     )
 
-    output_model = args[0] if len(args) > 0 else kwargs.get("output_model", None)
-    model_check = kwargs.get("model_check", False)
-    input_shapes = kwargs.get("input_shapes", None)
-    outputs = kwargs.get("outputs", None)
-    no_shape_infer = kwargs.get("no_shape_infer", False)
-    no_constant_folding = kwargs.get("no_constant_folding", False)
-    dtype = kwargs.get("dtype", None)
-    skip_fusion_patterns = kwargs.get("skip_fusion_patterns", None)
-    inspect = kwargs.get("inspect", False)
-    dump_to_disk = kwargs.get("dump_to_disk", False)
-    save_as_external_data = kwargs.get("save_as_external_data", False)
-    model_check_inputs = kwargs.get("model_check_inputs", None)
-    verbose = kwargs.get("verbose", False)
+    output_model = args[0] if len(args) > 0 else kwargs.get('output_model', None)
+    model_check = kwargs.get('model_check', False)
+    input_shapes = kwargs.get('input_shapes', None)
+    inputs = kwargs.get('inputs', None)
+    outputs = kwargs.get('outputs', None)
+    no_shape_infer = kwargs.get('no_shape_infer', False)
+    no_constant_folding = kwargs.get('no_constant_folding', False)
+    dtype = kwargs.get('dtype', None)
+    skip_fusion_patterns = kwargs.get('skip_fusion_patterns', None)
+    inspect = kwargs.get('inspect', False)
+    dump_to_disk = kwargs.get('dump_to_disk', False)
+    save_as_external_data = kwargs.get('save_as_external_data', False)
+    model_check_inputs = kwargs.get('model_check_inputs', None)
+    verbose = kwargs.get('verbose', False)
 
     logger = init_logging(verbose)
 
@@ -64,6 +66,9 @@ def slim(model: Union[str, onnx.ModelProto], *args, **kwargs):
         if dump_to_disk:
             dump_model_info_to_disk(model_name, float_info)
         return None
+
+    if inputs:
+        model = input_modification(model, inputs)
 
     if input_shapes:
         model = input_shape_modification(model, input_shapes)
@@ -108,7 +113,6 @@ def slim(model: Union[str, onnx.ModelProto], *args, **kwargs):
 
     end_time = time.time()
     elapsed_time = end_time - start_time
-
     print_model_info_as_table(
         model_name,
         [float_info, slimmed_info],

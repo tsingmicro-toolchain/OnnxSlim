@@ -83,6 +83,42 @@ def output_modification(model: onnx.ModelProto, outputs: str) -> onnx.ModelProto
     return model
 
 
+def input_modification(model: onnx.ModelProto, inputs: str) -> onnx.ModelProto:
+    """Modifies the output layers of the ONNX model based on specified output names and data types."""
+    graph = gs.import_onnx(model)
+    graph.inputs.clear()
+    tensors = graph.tensors()
+    for input in inputs:
+        values = input.rsplit(":", 1)
+        if len(values) == 1:
+            key = values[0]
+            if key not in tensors.keys():
+                raise Exception(f"Input name {key} not found in model, available keys: {' '.join(tensors.keys())}")
+            dtype = tensors[key].dtype
+            if dtype is None:
+                dtype = np.float32
+                logger.warning(f"Input layer {key} has no dtype, set to default {dtype}")
+        else:
+            key, dtype = values
+            if dtype == "fp16":
+                dtype = np.float16
+            elif dtype == "fp32":
+                dtype = np.float32
+            elif dtype == "int32":
+                dtype = np.int32
+            elif dtype == "bool":
+                dtype = bool
+            else:
+                raise Exception(f"Output layer {key} assigned unsupported dtype {dtype}")
+
+        graph.inputs.append(tensors[key].to_variable(dtype=dtype, shape=tensors[key].shape))
+
+    graph.cleanup(remove_unused_graph_inputs=True).toposort()
+    model = gs.export_onnx(graph)
+
+    return model
+
+
 def shape_infer(model: onnx.ModelProto):
     """Infer tensor shapes in an ONNX model using symbolic and static shape inference techniques."""
     logger.debug("Start shape inference.")

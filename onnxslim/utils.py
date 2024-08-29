@@ -191,7 +191,7 @@ def print_model_info_as_table(model_name: str, model_info_list: List[Dict], elap
             [SEPARATING_LINE] * (len(model_info_list) + 1),
         )
     )
-    all_inputs = list(model_info_list[0]["op_input_info"].keys())
+    all_inputs = [op_type for model_info in model_info_list for op_type in model_info.get("op_input_info", {})]
 
     for inputs in all_inputs:
         input_info_list = [f"IN: {inputs}"]
@@ -202,7 +202,7 @@ def print_model_info_as_table(model_name: str, model_info_list: List[Dict], elap
             input_info_list.append(inputs_shape)
         final_op_info.append(input_info_list)
 
-    all_outputs = {op_type for model_info in model_info_list for op_type in model_info.get("op_output_info", {})}
+    all_outputs = [op_type for model_info in model_info_list for op_type in model_info.get("op_output_info", {})]
 
     for outputs in all_outputs:
         output_info_list = [f"OUT: {outputs}"]
