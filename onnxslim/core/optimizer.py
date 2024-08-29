@@ -190,7 +190,9 @@ def find_conv_nodes(node, opset):
 
                 node.inputs.clear()
                 node.outputs.clear()
-                if len(pad_node_users) == 1:  # remove pad node if it has only one user
+                # remove pad node if it has only one user
+                if len(pad_node_users) == 1:
+                    input_variable.outputs.remove(pad_node)
                     pad_node.inputs.clear()
                     pad_node.outputs.clear()
 
