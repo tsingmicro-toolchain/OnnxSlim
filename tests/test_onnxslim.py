@@ -60,6 +60,14 @@ class TestFeature:
         print_model_info_as_table(request.node.name, summary)
         assert "/Flatten_output_0" in summary["op_output_info"]
 
+    def test_input_modification(self, request):
+        """Tests input modification."""
+        summary = summarize_model(slim(FILENAME, inputs=["/maxpool/MaxPool_output_0", "/layer1/layer1.0/relu/Relu_output_0"]))
+        print_model_info_as_table(request.node.name, summary)
+        assert "/maxpool/MaxPool_output_0" in summary["op_input_info"]
+        assert "/layer1/layer1.0/relu/Relu_output_0" in summary["op_input_info"]
+        raise
+
 
 if __name__ == "__main__":
     pytest.main(
