@@ -38,6 +38,9 @@ def dead_node_elimination(graph):
             ):
                 delete_node(node)
                 logger.debug(f"removing Reshape op: {node.name}")
+            elif node.inputs[0].shape and node.outputs[0].shape and node.inputs[0].shape == node.outputs[0].shape:
+                delete_node(node)
+                logger.debug(f"removing Reshape op: {node.name}")
             else:
                 node_output_shape = node.outputs[0].shape
                 if node_output_shape and check_shape(node_output_shape):
@@ -67,8 +70,7 @@ def dead_node_elimination(graph):
                 if value.ndim == 0 and value == 0:
                     delete_node(node, var_idx)
                     logger.debug(f"removing Add op: {node.name}")
-                elif np.all(value == 0) and (node.inputs[0].shape == node.inputs[1].shape):
-                    var_idx = 0 if idx == 1 else 1
+                elif np.all(value == 0) and (node.inputs[0].shape == node.outputs[0].shape):
                     delete_node(node, var_idx)
                     logger.debug(f"removing Add op: {node.name}")
         elif node.op == "Expand":
