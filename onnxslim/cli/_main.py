@@ -4,7 +4,6 @@ import onnx
 
 
 def slim(model: Union[str, onnx.ModelProto], *args, **kwargs):
-    """Slims an ONNX model by optimizing and modifying its structure, inputs, and outputs for improved performance."""
     import os
     import time
     from pathlib import Path
@@ -30,7 +29,7 @@ def slim(model: Union[str, onnx.ModelProto], *args, **kwargs):
         summarize_model,
     )
 
-    output_model = args[0] if args else kwargs.get("output_model", None)
+    output_model = args[0] if len(args) > 0 else kwargs.get("output_model", None)
     model_check = kwargs.get("model_check", False)
     input_shapes = kwargs.get("input_shapes", None)
     inputs = kwargs.get("inputs", None)

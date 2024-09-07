@@ -105,8 +105,6 @@ def tensor_to_onnx_bf16(tensor: Constant):
 
 
 class OnnxExporter(BaseExporter):
-    """Exports internal graph structures to ONNX format for model interoperability."""
-
     @staticmethod
     def export_tensor_proto(tensor: Constant) -> onnx.TensorProto:
         # Do *not* load LazyValues into an intermediate numpy array - instead, use

@@ -579,7 +579,6 @@ def check_onnx_compatibility():
 
 
 def get_max_tensor(model, topk=5):
-    """Identify and print the top-k largest constant tensors in an ONNX model based on their size."""
     graph = gs.import_onnx(model)
 
     tensor_map = graph.tensors()

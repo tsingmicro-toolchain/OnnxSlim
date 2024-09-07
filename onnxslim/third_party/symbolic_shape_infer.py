@@ -138,8 +138,6 @@ def sympy_reduce_product(x):
 
 
 class SymbolicShapeInference:
-    """Performs symbolic shape inference on ONNX models to deduce tensor shapes using symbolic computation."""
-
     def __init__(self, int_max, auto_merge, guess_output_rank, verbose, prefix=""):
         """Initializes the SymbolicShapeInference class with configuration parameters for symbolic shape inference."""
         self.dispatcher_ = {
@@ -2399,7 +2397,6 @@ class SymbolicShapeInference:
         vi.CopyFrom(helper.make_tensor_value_info(node.output[0], output_dtype, output_shape))
 
     def _infer_MultiScaleDeformableAttnTRT(self, node):
-        """Infers output shape and type for MultiScaleDeformableAttnTRT node using input shapes."""
         shape_value = self._try_get_shape(node, 0)
         sampling_locations = self._try_get_shape(node, 3)
         output_shape = shape_value
@@ -2838,8 +2835,8 @@ class SymbolicShapeInference:
                     ):
                         sorted_known_vi.update(node.output)
                         sorted_nodes.append(node)
-                if old_sorted_nodes_len == len(sorted_nodes) and any(
-                    o.name not in sorted_known_vi for o in self.out_mp_.graph.output
+                if old_sorted_nodes_len == len(sorted_nodes) and not all(
+                    o.name in sorted_known_vi for o in self.out_mp_.graph.output
                 ):
                     raise Exception("Invalid model with cyclic graph")
 

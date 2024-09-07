@@ -119,7 +119,6 @@ class GraphPattern:
         """Assigns a unique tensor ID, tracks its input node if provided, and initializes output node tracking."""
 
     def _add_tensor(self, input_node=None) -> int:
-        """Assigns a unique tensor ID, tracks its input node if provided, and initializes output node tracking."""
         tensor_id = self.num_tensors
         self.tensor_inputs[tensor_id] = []
         if input_node is not None:

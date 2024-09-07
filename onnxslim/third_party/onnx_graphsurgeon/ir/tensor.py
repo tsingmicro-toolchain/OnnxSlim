@@ -191,8 +191,6 @@ class Tensor:
 
 
 class Variable(Tensor):
-    """Represents a tensor with unknown values until inference-time, supporting dynamic shapes and data types."""
-
     @staticmethod
     def empty():
         """Create and return an empty Variable tensor with an empty name."""
@@ -375,8 +373,6 @@ class SparseValues(LazyValues):
 
 
 class Constant(Tensor):
-    """Represents a tensor with known constant values, supporting lazy loading and export data type specification."""
-
     def __init__(
         self,
         name: str,

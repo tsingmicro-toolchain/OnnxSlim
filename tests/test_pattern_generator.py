@@ -10,8 +10,6 @@ from onnxslim.core.pattern import Pattern, PatternGenerator, PatternMatcher
 
 
 class TestPatternGenerator:
-    """Generates and tests ONNX fusion patterns for neural network models using the GELU activation function."""
-
     def test_gelu(self, request):
         """Test the GELU activation function within the PatternModel class."""
 
