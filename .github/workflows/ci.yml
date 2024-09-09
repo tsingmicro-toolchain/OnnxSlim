@@ -20,7 +20,6 @@ jobs:
       - name: install dependency
         run: |
           pip install .
-          onnxslim --version
           pip install pytest onnxruntime
 
       - name: yolo test
@@ -28,6 +27,10 @@ jobs:
           pip install pytest pytest-xdist onnxruntime timm torchvision --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu
           pip install ultralytics
           pytest tests/test_yolo.py -sv
+
+      - name: restore onnxslim
+        run: |
+          pip install .      
 
       - name: model zoo test
         run: |
