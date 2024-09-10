@@ -20,30 +20,31 @@ def dead_node_elimination(graph):
     for node in graph.nodes:
         if node.op in {"Identity", "Dropout"}:
             delete_node(node)
+            logger.debug(f"removing {node.op} op: {node.name}")
         elif node.op == "Pad":
             if len(node.inputs) > 1 and isinstance(node.inputs[1], Constant):
                 pad_value = node.inputs[1].values.tolist()
                 pad_value = pad_value if isinstance(pad_value, list) else [pad_value]
                 if all(value == 0 for value in pad_value):
                     delete_node(node)
-                    logger.debug(f"removing Pad op: {node.name}")
+                    logger.debug(f"removing {node.op} op: {node.name}")
         elif node.op == "Cast":
             inp_dtype = [dtype_to_onnx(input.dtype) for input in node.inputs][0]
             if inp_dtype == node.attrs["to"]:
                 delete_node(node)
-                logger.debug(f"removing Cast op: {node.name}")
+                logger.debug(f"removing {node.op} op: {node.name}")
         elif node.op == "Reshape":
             if (node.inputs[0].shape and len(node.inputs[0].shape) == 1) and (
                 node.outputs[0].shape and len(node.outputs[0].shape) == 1
             ):
                 delete_node(node)
-                logger.debug(f"removing Reshape op: {node.name}")
+                logger.debug(f"removing {node.op} op: {node.name}")
             elif node.inputs[0].shape and node.outputs[0].shape and node.inputs[0].shape == node.outputs[0].shape:
                 delete_node(node)
-                logger.debug(f"removing Reshape op: {node.name}")
+                logger.debug(f"removing {node.op} op: {node.name}")
             else:
                 node_output_shape = node.outputs[0].shape
-                if node_output_shape and check_shape(node_output_shape):
+                if node_output_shape and check_shape(node_output_shape) and not isinstance(node.inputs[1], gs.Constant):
                     shapes = [shape if isinstance(shape, int) else -1 for shape in node_output_shape]
                     reshape_const = gs.Constant(
                         f"{node.inputs[1].name}_",
@@ -51,6 +52,7 @@ def dead_node_elimination(graph):
                     )
                     node.inputs.pop(1)
                     node.inputs.insert(1, reshape_const)
+                    logger.debug(f"replacing {node.op} op: {node.name}")
         elif node.op == "Mul":
             if (isinstance(node.inputs[1], Constant) and isinstance(node.inputs[0], Variable)) or (
                 isinstance(node.inputs[0], Constant) and isinstance(node.inputs[1], Variable)
@@ -59,7 +61,7 @@ def dead_node_elimination(graph):
                 if np.all(constant_variable.values == 1):
                     var_idx = 0 if idx == 1 else 1
                     delete_node(node, var_idx)
-                    logger.debug(f"removing Mul op: {node.name}")
+                    logger.debug(f"removing {node.op} op: {node.name}")
         elif node.op == "Add":
             if (isinstance(node.inputs[1], Constant) and isinstance(node.inputs[0], Variable)) or (
                 isinstance(node.inputs[0], Constant) and isinstance(node.inputs[1], Variable)
@@ -69,10 +71,10 @@ def dead_node_elimination(graph):
                 var_idx = 0 if idx == 1 else 1
                 if value.ndim == 0 and value == 0:
                     delete_node(node, var_idx)
-                    logger.debug(f"removing Add op: {node.name}")
+                    logger.debug(f"removing {node.op} op: {node.name}")
                 elif np.all(value == 0) and (node.inputs[0].shape == node.outputs[0].shape):
                     delete_node(node, var_idx)
-                    logger.debug(f"removing Add op: {node.name}")
+                    logger.debug(f"removing {node.op} op: {node.name}")
         elif node.op == "Expand":
             # tests/test_onnx_nets.py::TestTimmClass::test_timm[lambda_resnet26rpt_256]
             if len(node.inputs) > 1 and isinstance(node.inputs[1], Constant):
@@ -80,14 +82,14 @@ def dead_node_elimination(graph):
                 value = constant_variable.values
                 if value.ndim == 0 and value == 1:
                     delete_node(node)
-                    logger.debug(f"removing Expand op: {node.name}")
+                    logger.debug(f"removing {node.op} op: {node.name}")
                 elif np.all(value == 1) and (node.inputs[0].shape == node.outputs[0].shape):
                     delete_node(node)
-                    logger.debug(f"removing Expand op: {node.name}")
+                    logger.debug(f"removing {node.op} op: {node.name}")
         elif node.op == "Concat":
             if len(node.inputs) == 1:
                 delete_node(node)
-                logger.debug(f"removing Concat op: {node.name}")
+                logger.debug(f"removing {node.op} op: {node.name}")
             else:
                 for input in node.inputs:
                     if isinstance(input, Constant) and input.values.size == 0:
@@ -98,20 +100,20 @@ def dead_node_elimination(graph):
                 value = constant_variable.values
                 if value.ndim == 0 and value == 0:
                     delete_node(node)
-                    logger.debug(f"removing Sub op: {node.name}")
+                    logger.debug(f"removing {node.op} op: {node.name}")
                 elif np.all(value == 0) and (node.inputs[0].shape == node.outputs[0].shape):
                     delete_node(node)
-                    logger.debug(f"removing Sub op: {node.name}")
+                    logger.debug(f"removing {node.op} op: {node.name}")
         elif node.op == "Div":
             if isinstance(node.inputs[1], Constant) and isinstance(node.inputs[0], Variable):
                 constant_variable = node.inputs[1]
                 value = constant_variable.values
                 if value.ndim == 0 and value == 1:
                     delete_node(node)
-                    logger.debug(f"removing Div op: {node.name}")
+                    logger.debug(f"removing {node.op} op: {node.name}")
                 elif np.all(value == 1) and (node.inputs[0].shape == node.outputs[0].shape):
                     delete_node(node)
-                    logger.debug(f"removing Div op: {node.name}")
+                    logger.debug(f"removing {node.op} op: {node.name}")
 
 
 def check_shape(shapes):
