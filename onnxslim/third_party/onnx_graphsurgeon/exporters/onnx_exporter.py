@@ -159,7 +159,7 @@ class OnnxExporter(BaseExporter):
         return onnx_tensor
 
     @staticmethod
-    def export_attributes(attrs: dict, subgraph_tensor_map) -> List[onnx.AttributeProto]:
+    def export_attributes(attrs: dict, subgraph_tensor_map=None) -> List[onnx.AttributeProto]:
         """Convert function attributes to ONNX AttributeProtos for model export."""
         onnx_attrs: List[onnx.AttributeProto] = []
         for key, val in attrs.items():
@@ -192,7 +192,7 @@ class OnnxExporter(BaseExporter):
         return onnx_attrs
 
     @staticmethod
-    def export_node(node: Node, subgraph_tensor_map) -> onnx.NodeProto:
+    def export_node(node: Node, subgraph_tensor_map=None) -> onnx.NodeProto:
         # Cannot pass in attrs directly as make_node will change the order
         """Static method to convert an internal node to an ONNX node representation."""
         onnx_node = onnx.helper.make_node(
