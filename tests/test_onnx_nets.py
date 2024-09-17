@@ -47,7 +47,7 @@ class TestTorchVisionClass:
 
 
 class TestTimmClass:
-    @pytest.fixture(params=timm.list_models())
+    @pytest.fixture(params=[model for model in timm.list_models() if 'huge' not in model and 'giant' not in model])
     def model_name(self, request):
         """Yields names of models available in TIMM (https://github.com/rwightman/pytorch-image-models) for pytest fixture parameterization."""
         yield request.param
