@@ -5,8 +5,14 @@
         <img src="https://badgen.net/pypi/v/onnxslim?color=blue" />
     </a>
     <a href="https://pypi.org/project/onnxslim">
-        <img src="https://static.pepy.tech/badge/onnxslim" />
+        <img src="https://static.pepy.tech/badge/onnxslim/week" />
     </a>
+    <a href="https://pypi.org/project/onnxslim">
+        <img src="https://static.pepy.tech/badge/onnxslim/month" />
+    </a>    
+    <a href="https://pypi.org/project/onnxslim">
+        <img src="https://static.pepy.tech/badge/onnxslim" />
+    </a>   
     <a href="https://github.com/inisis/onnxslim/actions/workflows/ci.yaml">
         <img src="https://github.com/inisis/onnxslim/actions/workflows/ci.yml/badge.svg" />
     </a>
