@@ -165,8 +165,7 @@ def onnxruntime_inference(model: onnx.ModelProto, input_data: dict) -> Dict[str,
     return onnx_output, model
 
 
-def print_model_info_as_table(model_name: str, model_info_list: List[Dict], elapsed_time: float = None):
-    """Prints the model information as a formatted table for the given model name and list of model details."""
+def format_model_info(model_name: str, model_info_list: List[Dict], elapsed_time: float = None):
     assert model_info_list, "model_info_list must contain more than one model info"
     if not isinstance(model_info_list, list):
         model_info_list = [model_info_list]
@@ -241,6 +240,13 @@ def print_model_info_as_table(model_name: str, model_info_list: List[Dict], elap
                 ["Elapsed Time"] + [f"{elapsed_time:.2f} s"],
             )
         )
+
+    return final_op_info
+
+
+def print_model_info_as_table(model_name: str, model_info_list: List[Dict], elapsed_time: float = None):
+    """Prints the model information as a formatted table for the given model name and list of model details."""
+    final_op_info = format_model_info(model_name, model_info_list, elapsed_time)
     lines = tabulate(
         final_op_info,
         headers=[],
