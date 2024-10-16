@@ -405,7 +405,7 @@ class Graph:
                 subgraph.cleanup(
                     remove_unused_node_outputs=remove_unused_node_outputs,
                     recurse_subgraphs=recurse_subgraphs,
-                    remove_unused_graph_inputs=remove_unused_graph_inputs,
+                    remove_unused_graph_inputs=False,
                     recurse_functions=False,  # Only cleanup functions once
                 )
 
@@ -435,7 +435,7 @@ class Graph:
                 if inp in used_tensors or not remove_unused_graph_inputs:
                     inputs.append(inp)
                 else:
-                    G_LOGGER.ultra_verbose(f"Removing unused input: {inp}")
+                    G_LOGGER.debug(f"Removing unused input: {inp}")
             self.inputs = inputs
 
             nodes = []
@@ -645,7 +645,7 @@ class Graph:
 
                     if check_duplicates:
                         G_LOGGER.critical(msg)
-                    G_LOGGER.warning(msg)
+                    # G_LOGGER.warning(msg)
 
                 tensor_map[tensor.name] = tensor
 
