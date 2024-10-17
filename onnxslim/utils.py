@@ -539,6 +539,7 @@ def get_model_subgraph_size(model):
 def check_onnx_compatibility():
     """Ensure ONNX Runtime and ONNX versions are compatible for model inference."""
     compatibility_dict = {
+        "1.19": "1.17",
         "1.18": "1.16",
         "1.17": "1.15",
         "1.16": "1.14.1",
