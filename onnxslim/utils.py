@@ -191,6 +191,7 @@ def format_model_info(model_name: str, model_info_list: List[Dict], elapsed_time
         )
     )
     all_inputs = [op_type for model_info in model_info_list for op_type in model_info.get("op_input_info", {})]
+    all_inputs = list(dict.fromkeys(all_inputs))
 
     for inputs in all_inputs:
         input_info_list = [f"IN: {inputs}"]
@@ -202,6 +203,7 @@ def format_model_info(model_name: str, model_info_list: List[Dict], elapsed_time
         final_op_info.append(input_info_list)
 
     all_outputs = [op_type for model_info in model_info_list for op_type in model_info.get("op_output_info", {})]
+    all_outputs = list(dict.fromkeys(all_outputs))
 
     for outputs in all_outputs:
         output_info_list = [f"OUT: {outputs}"]
