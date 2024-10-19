@@ -315,7 +315,7 @@ class LazyValues:
         if not isinstance(other, LazyValues):
             return False
 
-        tensor_match = self.tensor.raw_data == other.tensor.raw_data
+        tensor_match = self.tensor == other.tensor
         shape_match = self.shape == other.shape
         dtype_match = self.dtype == other.dtype
 
