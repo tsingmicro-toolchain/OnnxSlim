@@ -61,7 +61,7 @@ class TestModelZoo:
         print_model_info_as_table(request.node.name, summary)
         assert summary["op_type_counts"]["Range"] == 0
         assert summary["op_type_counts"]["Floor"] == 0
-        assert summary["op_type_counts"]["Concat"] == 54
+        assert summary["op_type_counts"]["Concat"] == 55
 
 
 if __name__ == "__main__":
