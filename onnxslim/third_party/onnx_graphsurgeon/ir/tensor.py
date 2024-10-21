@@ -315,11 +315,13 @@ class LazyValues:
         if not isinstance(other, LazyValues):
             return False
 
-        tensor_match = (self.tensor.int32_data == other.tensor.int32_data) and (self.tensor.raw_data == other.tensor.raw_data)
-        shape_match = self.shape == other.shape
-        dtype_match = self.dtype == other.dtype
+        for field in self.tensor.DESCRIPTOR.fields:
+            if field.name == "name":
+                continue
+            if getattr(self.tensor, field.name) != getattr(other.tensor, field.name):
+                return False
 
-        return tensor_match and shape_match and dtype_match
+        return True
 
 
 class SparseValues(LazyValues):
