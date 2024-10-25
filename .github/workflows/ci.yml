@@ -29,11 +29,7 @@ jobs:
         run: |
           pip install pytest pytest-xdist onnxruntime timm torchvision --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu
           pip install ultralytics
-          pytest tests/test_yolo.py -sv
-
-      - name: restore onnxslim
-        run: |
-          pip install .      
+          pytest tests/test_yolo.py -sv  
 
       - name: model zoo test
         run: |
