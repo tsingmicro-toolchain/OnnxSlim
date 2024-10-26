@@ -7,15 +7,20 @@ def delete_node(node, input_var_idx=0, output_var_idx=0):
     input_variable = node.inputs[input_var_idx]
     node_variable = node.outputs[output_var_idx]
     next_nodes = get_node_users(node)
-    if next_nodes:
-        for next_node in next_nodes:
-            if isinstance(next_node, Variable) and next_node.is_output:
-                continue
-            index = next_node.inputs.index(node_variable)
-            next_node.inputs.pop(index)
-            next_node.inputs.insert(index, input_variable)
-    else:
+
+    output_var = None
+    for next_node in next_nodes:
+        if isinstance(next_node, Variable) and next_node.is_output:
+            output_var = next_node
+            break
+
+    if output_var:
         input_node = node.i()
         input_node.outputs.remove(node.inputs[input_var_idx])
         input_node.outputs.append(node.outputs[output_var_idx])
         node.outputs.clear()
+    else:
+        for next_node in next_nodes:
+            index = next_node.inputs.index(node_variable)
+            next_node.inputs.pop(index)
+            next_node.inputs.insert(index, input_variable)
