@@ -10,17 +10,18 @@ from onnxslim.third_party.onnx_graphsurgeon.ir.tensor import Constant, Variable
 logger = logging.getLogger("onnxslim")
 
 
-def dead_node_elimination(graph):
+def dead_node_elimination(graph, is_subgraph=False):
     """Perform in-place constant folding optimizations on the given computational graph by eliminating redundant
     nodes.
     """
     for subgraph in graph.subgraphs():
-        dead_node_elimination(subgraph)
+        dead_node_elimination(subgraph, is_subgraph=True)
 
     for node in graph.nodes:
         if node.op in {"Identity", "Dropout"}:
-            delete_node(node)
-            logger.debug(f"removing {node.op} op: {node.name}")
+            if not is_subgraph:
+                delete_node(node)
+                logger.debug(f"removing {node.op} op: {node.name}")
         elif node.op == "Pad":
             if len(node.inputs) > 1 and isinstance(node.inputs[1], Constant):
                 pad_value = node.inputs[1].values.tolist()

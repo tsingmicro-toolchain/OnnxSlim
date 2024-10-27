@@ -1,4 +1,4 @@
-from onnxslim.core.pattern import get_node_users
+from onnxslim.core.pattern import get_node_users, get_node_feeds
 from onnxslim.third_party.onnx_graphsurgeon.ir.tensor import Variable
 
 
@@ -15,10 +15,12 @@ def delete_node(node, input_var_idx=0, output_var_idx=0):
             break
 
     if output_var:
-        input_node = node.i()
-        input_node.outputs.remove(node.inputs[input_var_idx])
-        input_node.outputs.append(node.outputs[output_var_idx])
-        node.outputs.clear()
+        feeds = get_node_feeds(node)
+        feed = feeds[0]
+        if not isinstance(feed, Variable):
+            feed.outputs.remove(node.inputs[input_var_idx])
+            feed.outputs.append(node.outputs[output_var_idx])
+            node.outputs.clear()
     else:
         for next_node in next_nodes:
             index = next_node.inputs.index(node_variable)
