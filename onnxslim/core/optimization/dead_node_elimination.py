@@ -73,7 +73,7 @@ def dead_node_elimination(graph, is_subgraph=False):
                 if value.ndim == 0 and value == 0:
                     delete_node(node, var_idx)
                     logger.debug(f"removing {node.op} op: {node.name}")
-                elif np.all(value == 0) and (node.inputs[0].shape == node.outputs[0].shape):
+                elif np.all(value == 0) and (node.inputs[var_idx].shape == node.outputs[0].shape):
                     delete_node(node, var_idx)
                     logger.debug(f"removing {node.op} op: {node.name}")
         elif node.op == "Expand":
