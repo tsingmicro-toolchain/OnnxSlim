@@ -104,6 +104,16 @@ class TestModelZoo:
         filename = f"{MODELZOO_PATH}/{name}/{name}.onnx"
         self.run_model_test(name, filename)
 
+    def test_en_number_mobile_v2_0_rec_infer(self, request):
+        name = request.node.originalname[len("test_") :]
+        filename = f"{MODELZOO_PATH}/{name}/{name}.onnx"
+        self.run_model_test(name, filename)
+
+    def test_paddleocr(self, request):
+        name = request.node.originalname[len("test_") :]
+        filename = f"{MODELZOO_PATH}/{name}/{name}.onnx"
+        self.run_model_test(name, filename)
+
 
 if __name__ == "__main__":
     pytest.main(
