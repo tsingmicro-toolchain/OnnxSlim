@@ -106,6 +106,7 @@ class Graph:
         doc_string=None,
         opset=None,
         import_domains=None,
+        ir_version=None,
         producer_name: str = None,
         producer_version: str = None,
         functions: "Sequence[Function]" = None,
@@ -133,6 +134,7 @@ class Graph:
         self.producer_name = misc.default_value(producer_name, "")
         self.producer_version = misc.default_value(producer_version, "")
         self.import_domains = import_domains
+        self.ir_version = ir_version
         # For layer() function
         self.name_idx = 0
 

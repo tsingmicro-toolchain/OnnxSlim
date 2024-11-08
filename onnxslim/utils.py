@@ -177,11 +177,13 @@ def format_model_info(model_name: str, model_info_list: List[Dict], elapsed_time
                 ["Model Name", model_name],
                 [SEPARATING_LINE],
                 ["Op Set ", model_info_list[0]["op_set"]],
+                [SEPARATING_LINE],
+                ["IR Version ", model_info_list[0]["ir_version"]],
             )
         )
     else:
         final_op_info.append(
-            ["Model Name", model_name, "Op Set: " + model_info_list[0]["op_set"]] + [""] * (len(model_info_list) - 2)
+            ["Model Name", model_name, "Op Set: " + model_info_list[0]["op_set"] + " / IR Version: " + model_info_list[0]["ir_version"]] + [""] * (len(model_info_list) - 2)
         )
     final_op_info.extend(
         (
@@ -319,6 +321,12 @@ def get_opset(model: onnx.ModelProto) -> int:
     except Exception:
         return None
 
+def get_ir_version(model: onnx.ModelProto) -> int:
+    """Returns the ONNX ir version for a given model."""
+    try:
+        return model.ir_version
+    except Exception:
+        return None
 
 def summarize_model(model: Union[str, onnx.ModelProto], tag=None) -> Dict:
     """Generates a summary of the ONNX model, including model size, operations, and tensor shapes."""
@@ -388,6 +396,7 @@ def summarize_model(model: Union[str, onnx.ModelProto], tag=None) -> Dict:
     get_graph_node_info(model.graph)
 
     model_info["op_set"] = str(get_opset(model))
+    model_info["ir_version"] = str(get_ir_version(model))
     model_info["op_info"] = op_info
     model_info["op_type_counts"] = op_type_counts
 
