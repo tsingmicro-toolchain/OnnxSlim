@@ -211,14 +211,6 @@ class OnnxImporter(BaseImporter):
         return model_or_func.opset_import
 
     @staticmethod
-    def get_ir_version(model_or_func: Union[onnx.ModelProto, onnx.FunctionProto]):
-        """Retrieves the ir_version from an ONNX model or function."""
-        try:
-            return model_or_func.ir_version
-        except Exception:
-            return None
-
-    @staticmethod
     def import_tensor(onnx_tensor: Union[onnx.ValueInfoProto, onnx.TensorProto, onnx.SparseTensorProto]) -> Tensor:
         """Converts an ONNX tensor into a corresponding internal Tensor representation."""
         if isinstance(onnx_tensor, onnx.SparseTensorProto):
@@ -405,7 +397,6 @@ class OnnxImporter(BaseImporter):
         tensor_map: "OrderedDict[str, Tensor]" = None,
         opset=None,
         import_domains: onnx.OperatorSetIdProto = None,
-        ir_version=None,
         producer_name: str = None,
         producer_version: str = None,
         functions: List[Function] = None,
@@ -504,7 +495,6 @@ class OnnxImporter(BaseImporter):
             producer_version=producer_version,
             opset=opset,
             import_domains=import_domains,
-            ir_version=ir_version,
             functions=functions,
         )
 
@@ -520,7 +510,6 @@ def import_onnx(onnx_model: "onnx.ModelProto") -> Graph:
         Graph: A corresponding onnx-graphsurgeon Graph.
     """
     model_opset = OnnxImporter.get_opset(onnx_model)
-    model_ir_version = OnnxImporter.get_ir_version(onnx_model)
     model_import_domains = OnnxImporter.get_import_domains(onnx_model)
     functions: List[Function] = [
         OnnxImporter.import_function(
@@ -545,7 +534,6 @@ def import_onnx(onnx_model: "onnx.ModelProto") -> Graph:
         onnx_model.graph,
         opset=model_opset,
         import_domains=model_import_domains,
-        ir_version=model_ir_version,
         producer_name=onnx_model.producer_name,
         producer_version=onnx_model.producer_version,
         functions=functions,

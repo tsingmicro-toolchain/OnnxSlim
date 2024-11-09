@@ -363,9 +363,6 @@ def export_onnx(graph: Graph, do_type_check=True, **kwargs) -> "onnx.ModelProto"
     if "opset_imports" not in kwargs:
         kwargs["opset_imports"] = update_import_domains(graph)
 
-    if "ir_version" not in kwargs:
-        kwargs["ir_version"] = graph.ir_version
-
     model = onnx.helper.make_model(onnx_graph, **kwargs)
     model.producer_name = graph.producer_name
     model.producer_version = graph.producer_version
