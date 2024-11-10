@@ -43,10 +43,10 @@ class ReshapePatternMatcher(PatternMatcher):
                 """
                 if isinstance(reshape_node.inputs[1], gs.Constant):
                     input_shape = reshape_node.inputs[0].shape
-                    reshape_shape = reshape_node.inputs[1].values
+                    reshape_shape = reshape_node.inputs[1].values.tolist()
                     if input_shape is not None and np.any(reshape_shape == 0):
                         shape = [
-                            input_shape[i] if dim_size == 0 else dim_size for i, dim_size in enumerate(reshape_shape)
+                            input_shape[i] if dim_size == 0 else reshape_shape[i] for i, dim_size in enumerate(reshape_shape)
                         ]
                         if not all(isinstance(item, int) for item in shape):
                             return False
