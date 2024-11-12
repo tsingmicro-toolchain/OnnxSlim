@@ -110,6 +110,7 @@ class Graph:
         producer_name: str = None,
         producer_version: str = None,
         functions: "Sequence[Function]" = None,
+        metadata_props=None,
     ):
         """
         Args:
@@ -133,6 +134,7 @@ class Graph:
         self.opset = misc.default_value(opset, Graph.DEFAULT_OPSET)
         self.producer_name = misc.default_value(producer_name, "")
         self.producer_version = misc.default_value(producer_version, "")
+        self.metadata_props = metadata_props
         self.import_domains = import_domains
         self.ir_version = ir_version
         # For layer() function

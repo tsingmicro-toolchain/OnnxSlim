@@ -409,6 +409,7 @@ class OnnxImporter(BaseImporter):
         producer_name: str = None,
         producer_version: str = None,
         functions: List[Function] = None,
+        metadata_props=None,
     ) -> Graph:
         """
         Imports a Graph from an ONNX Graph.
@@ -506,6 +507,7 @@ class OnnxImporter(BaseImporter):
             import_domains=import_domains,
             ir_version=ir_version,
             functions=functions,
+            metadata_props=metadata_props,
         )
 
 
@@ -549,4 +551,5 @@ def import_onnx(onnx_model: "onnx.ModelProto") -> Graph:
         producer_name=onnx_model.producer_name,
         producer_version=onnx_model.producer_version,
         functions=functions,
+        metadata_props=onnx_model.metadata_props
     )
