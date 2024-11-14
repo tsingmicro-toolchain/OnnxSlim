@@ -1,4 +1,6 @@
+import sys
 import argparse
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 import dataclasses
 from dataclasses import dataclass, field
 from typing import List, Optional, Type
@@ -109,8 +111,11 @@ class CheckerArguments:
     verbose: bool = field(default=False, metadata={"help": "verbose mode, default False."})
 
 
-class ArgumentParser:
-    def __init__(self, *argument_dataclasses: Type):
+class OnnxSlimArgumentParser(ArgumentParser):
+    def __init__(self, *argument_dataclasses: Type, **kwargs):
+        if "formatter_class" not in kwargs:
+            kwargs["formatter_class"] = ArgumentDefaultsHelpFormatter
+        super().__init__(**kwargs)
         self.argument_dataclasses = argument_dataclasses
         self.parser = argparse.ArgumentParser(
             description="OnnxSlim: A Toolkit to Help Optimizer Onnx Model",
