@@ -167,7 +167,7 @@ def onnxruntime_inference(model: onnx.ModelProto, input_data: dict) -> Dict[str,
 
 def format_model_info(model_name: str, model_info_list: List[Dict], elapsed_time: float = None):
     assert model_info_list, "model_info_list must contain more than one model info"
-    if not isinstance(model_info_list, list):
+    if not isinstance(model_info_list, (list, tuple)):
         model_info_list = [model_info_list]
 
     final_op_info = []

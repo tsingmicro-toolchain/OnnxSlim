@@ -1,9 +1,9 @@
-from typing import Union
+from typing import List, Union
 
 import onnx
 
 
-def slim(model: Union[str, onnx.ModelProto], *args, **kwargs):
+def slim(model: List[Union[str, onnx.ModelProto]], *args, **kwargs):
     import os
     import time
     from pathlib import Path
@@ -48,24 +48,39 @@ def slim(model: Union[str, onnx.ModelProto], *args, **kwargs):
 
     MAX_ITER = int(os.getenv("ONNXSLIM_MAX_ITER")) if os.getenv("ONNXSLIM_MAX_ITER") else 10
 
-    if isinstance(model, str):
-        model_name = Path(model).name
-        model = onnx.load(model)
-    else:
-        model_name = "OnnxModel"
-
-    freeze(model)
-
     start_time = time.time()
 
-    if output_model or inspect:
-        float_info = summarize_model(model)
+    def get_info(model, inspect=False):
+        if isinstance(model, str):
+            model_name = Path(model).name
+            model = onnx.load(model)
+        else:
+            model_name = "OnnxModel"
 
-    if inspect:
-        print_model_info_as_table(model_name, [float_info])
+        freeze(model)
+
+        if not inspect:
+            return model_name, model
+
+        model_info = summarize_model(model)
+
+        return model_name, model_info
+
+    if isinstance(model, list):
+        model_name_list, model_info_list = zip(*[
+            get_info(m, inspect=True) for m in model
+        ])
+
         if dump_to_disk:
-            dump_model_info_to_disk(model_name, float_info)
-        return None
+            [dump_model_info_to_disk(name, info) for name, info in zip(model_name_list, model_info_list)]
+
+        print_model_info_as_table(model_name_list[0], model_info_list)
+
+        return
+    else:
+        model_name, model = get_info(model)
+        if output_model:
+            original_info = summarize_model(model)
 
     if inputs:
         model = input_modification(model, inputs)
@@ -115,7 +130,7 @@ def slim(model: Union[str, onnx.ModelProto], *args, **kwargs):
     elapsed_time = end_time - start_time
     print_model_info_as_table(
         model_name,
-        [float_info, slimmed_info],
+        [original_info, slimmed_info],
         elapsed_time,
     )
 
@@ -134,9 +149,6 @@ def main():
         ModelArguments, OptimizationArguments, ModificationArguments, CheckerArguments
     )
     model_args, optimization_args, modification_args, checker_args = argument_parser.parse_args_into_dataclasses()
-
-    if checker_args.inspect and model_args.output_model:
-        argument_parser.error("--inspect and output_model are mutually exclusive")
 
     if not checker_args.inspect and checker_args.dump_to_disk:
         argument_parser.error("dump_to_disk can only be used with --inspect")
