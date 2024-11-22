@@ -3,7 +3,7 @@ from typing import List, Union
 import onnx
 
 
-def slim(model: List[Union[str, onnx.ModelProto]], *args, **kwargs):
+def slim(model: Union[str, onnx.ModelProto, List[Union[str, onnx.ModelProto]]], *args, **kwargs):
     import os
     import time
     from pathlib import Path
@@ -38,7 +38,7 @@ def slim(model: List[Union[str, onnx.ModelProto]], *args, **kwargs):
     no_constant_folding = kwargs.get("no_constant_folding", False)
     dtype = kwargs.get("dtype", None)
     skip_fusion_patterns = kwargs.get("skip_fusion_patterns", None)
-    inspect = kwargs.get("inspect", False)
+    kwargs.get("inspect", False)
     dump_to_disk = kwargs.get("dump_to_disk", False)
     save_as_external_data = kwargs.get("save_as_external_data", False)
     model_check_inputs = kwargs.get("model_check_inputs", None)
@@ -62,25 +62,23 @@ def slim(model: List[Union[str, onnx.ModelProto]], *args, **kwargs):
         if not inspect:
             return model_name, model
 
-        model_info = summarize_model(model)
+        model_info = summarize_model(model, model_name)
 
-        return model_name, model_info
+        return model_info
 
     if isinstance(model, list):
-        model_name_list, model_info_list = zip(*[
-            get_info(m, inspect=True) for m in model
-        ])
+        model_info_list = [get_info(m, inspect=True) for m in model]
 
         if dump_to_disk:
-            [dump_model_info_to_disk(name, info) for name, info in zip(model_name_list, model_info_list)]
+            [dump_model_info_to_disk(info) for info in model_info_list]
 
-        print_model_info_as_table(model_name_list[0], model_info_list)
+        print_model_info_as_table(model_info_list)
 
         return
     else:
         model_name, model = get_info(model)
         if output_model:
-            original_info = summarize_model(model)
+            original_info = summarize_model(model, model_name)
 
     if inputs:
         model = input_modification(model, inputs)
@@ -123,13 +121,12 @@ def slim(model: List[Union[str, onnx.ModelProto]], *args, **kwargs):
     if not output_model:
         return model
 
-    slimmed_info = summarize_model(model)
+    slimmed_info = summarize_model(model, output_model)
     save(model, output_model, model_check, save_as_external_data, slimmed_info)
 
     end_time = time.time()
     elapsed_time = end_time - start_time
     print_model_info_as_table(
-        model_name,
         [original_info, slimmed_info],
         elapsed_time,
     )
