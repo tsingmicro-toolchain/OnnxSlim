@@ -1,3 +1,5 @@
+import numpy as np
+
 import onnxslim.third_party.onnx_graphsurgeon as gs
 from onnxslim.core.optimization.dead_node_elimination import get_constant_variable
 from onnxslim.core.pattern import Pattern, PatternMatcher, get_node_users
@@ -34,7 +36,7 @@ class MatMulAddPatternMatcher(PatternMatcher):
             matmul_node.inputs[0] if isinstance(matmul_node.inputs[1], gs.Constant) else matmul_node.inputs[1]
         )
         users = get_node_users(matmul_node)
-        if len(users) == 1 and matmul_bias_variable:
+        if len(users) == 1 and matmul_bias_variable and len(matmul_bias_variable.shape) == 2:
             if (
                 input_variable.shape
                 and len(input_variable.shape) > 2
