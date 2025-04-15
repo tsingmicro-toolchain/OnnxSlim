@@ -94,7 +94,7 @@ class TestModelZoo:
             result = transformation_func(filename, output_file)
             if result is None:
                 return None
-            if result or result.returncode == 0:
+            if result is True or (hasattr(result, "returncode") and result.returncode == 0):
                 if check_func:
                     try:
                         check_func(output_file)
@@ -170,11 +170,15 @@ class TestModelZoo:
 
 
 if __name__ == "__main__":
-    pytest.main(
-        [
-            "-p",
-            "no:warnings",
-            "-sv",
-            "tests/test_benchmark.py",
-        ]
+    import sys
+
+    sys.exit(
+        pytest.main(
+            [
+                "-p",
+                "no:warnings",
+                "-sv",
+                "tests/test_benchmark.py",
+            ]
+        )
     )

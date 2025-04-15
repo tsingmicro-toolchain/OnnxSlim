@@ -79,11 +79,15 @@ class TestPatternGenerator:
 
 
 if __name__ == "__main__":
-    pytest.main(
-        [
-            "-p",
-            "no:warnings",
-            "-sv",
-            "tests/test_pattern_generator.py",
-        ]
+    import sys
+
+    sys.exit(
+        pytest.main(
+            [
+                "-p",
+                "no:warnings",
+                "-sv",
+                "tests/test_pattern_generator.py",
+            ]
+        )
     )

@@ -1224,11 +1224,15 @@ class TestYolo:
 
 
 if __name__ == "__main__":
-    pytest.main(
-        [
-            "-p",
-            "no:warnings",
-            "-sv",
-            "tests/test_yolo.py",
-        ]
+    import sys
+
+    sys.exit(
+        pytest.main(
+            [
+                "-p",
+                "no:warnings",
+                "-sv",
+                "tests/test_yolo.py",
+            ]
+        )
     )
