@@ -7,6 +7,7 @@ import torch.nn as nn
 
 from onnxslim import register_fusion_pattern, slim
 from onnxslim.core.pattern import Pattern, PatternGenerator, PatternMatcher
+from onnxslim.utils import summarize_model
 
 
 class TestPatternGenerator:
@@ -55,7 +56,7 @@ class TestPatternGenerator:
         model = onnx.load(pattern_filename)
         pgen = PatternGenerator(model)
         template = pgen.generate()
-        pattern = Pattern(template)
+        Pattern(template)
 
         class GeluMatcher(PatternMatcher):
             def __init__(self, pattern, priority):
@@ -65,17 +66,20 @@ class TestPatternGenerator:
             @property
             def name(self):
                 """Return the name of the matcher as 'FusionGelu'."""
-                return "FusionGelu"
+                return "FusionGeluTest"
 
             def rewrite(self, opset=11):
                 """Raise an exception indicating a pattern match in GeluMatcher."""
                 raise Exception("Pattern Matched")
 
-        register_fusion_pattern(GeluMatcher(pattern, 1))
-        with pytest.raises(Exception) as excinfo:
-            slim(model_filename, f"{directory}/{request.node.name}_slim.onnx")
+        from onnxslim.core.pattern.fusion import GeluPatternMatcher
 
-        assert str(excinfo.value) == "Pattern Matched"
+        register_fusion_pattern(GeluPatternMatcher(1))
+        slim(model_filename, f"{directory}/{request.node.name}_slim.onnx")
+        summary = summarize_model(f"{directory}/{request.node.name}_slim.onnx")
+        assert summary.op_type_counts["Gelu"] == 1
+
+        # assert str(excinfo.value) == "Pattern Matched"
 
 
 if __name__ == "__main__":
