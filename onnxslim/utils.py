@@ -49,6 +49,8 @@ def format_bytes(size: Union[int, Tuple[int, ...]]) -> str:
     """Convert byte sizes into human-readable format with appropriate units (B, KB, MB, GB)."""
     if isinstance(size, int):
         size = (size,)
+    elif isinstance(size, np.int64):
+        size = (int(size),)
 
     units = ["B", "KB", "MB", "GB"]
     formatted_sizes = []
@@ -382,7 +384,7 @@ class ModelInfo:
     def _summarize_model(self, model):
         self.op_set = str(get_opset(model))
         self.ir_version = str(get_ir_version(model))
-        self.model_size = model.ByteSize()
+        self.model_size = get_initializer_size(model)
 
         for input in model.graph.input:
             self.input_info.append(TensorInfo(input))
@@ -489,7 +491,7 @@ def save(
             logger.warning("Model too large and cannot be checked.")
 
     if model_path:  # model larger than 2GB can be saved, but compiler like trtexec won't parse it
-        if model.ByteSize() <= checker.MAXIMUM_PROTOBUF and not save_as_external_data:
+        if get_initializer_size(model) <= checker.MAXIMUM_PROTOBUF and not save_as_external_data:
             onnx.save(model, model_path)
         else:
             import os
@@ -558,15 +560,13 @@ def calculate_tensor_size(tensor):
     return num_elements * element_size
 
 
-def get_model_size_and_initializer_size(model):
-    """Calculates and prints the model size and initializer size for an ONNX model in bytes."""
+def get_initializer_size(model):
     initializer_size = 0
     for tensor in model.graph.initializer:
         tensor_size = calculate_tensor_size(tensor)
         initializer_size += tensor_size
 
-    print("model size", model.ByteSize())
-    print("initializer size", initializer_size)
+    return initializer_size
 
 
 def get_model_subgraph_size(model):
@@ -726,6 +726,10 @@ def update_outputs_dims(
         output_dim_arr = output_dims[output_name]
         if output_dim_arr is None:
             continue
+
+        if len(output.type.tensor_type.shape.dim) == 0:
+            for _ in range(len(output_dim_arr)):
+                output.type.tensor_type.shape.dim.add()
         for j, dim in enumerate(output_dim_arr):
             update_dim(output, dim, j, output_name)
 
