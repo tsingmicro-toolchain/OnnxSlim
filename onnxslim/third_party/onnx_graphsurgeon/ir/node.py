@@ -258,5 +258,8 @@ class Node:
                         if input == inp:
                             user.inputs[i] = node.outputs[self.outputs.index(inp)]
 
+        if isinstance(self.outputs[0], Variable) and self.outputs[0].is_output:
+            node.outputs[0] = self.outputs[0]
+
         self.inputs.clear()
         self.outputs.clear()
