@@ -283,24 +283,25 @@ def dump_model_info_to_disk(model_info: Dict):
         # Write the data
         for node_name, info in model_info.op_info.items():
             op_type, output_info_list = info.op, info.outputs
-            # Write the first row with actual NodeName and OpType
-            row_data_first = {
-                "NodeName": node_name,
-                "OpType": op_type,
-                "OutputDtype": output_info_list[0].dtype,  # First entry in the list
-                "OutputShape": output_info_list[0].shape,  # First entry in the list
-            }
-            writer.writerow(row_data_first)
-
-            # Write subsequent rows with empty strings for NodeName and OpType
-            for output_dtype, output_shape in output_info_list[1:]:
-                row_data_empty = {
-                    "NodeName": "",
-                    "OpType": "",
-                    "OutputDtype": output_dtype,
-                    "OutputShape": output_shape,
+            if len(output_info_list) >= 1:
+                # Write the first row with actual NodeName and OpType
+                row_data_first = {
+                    "NodeName": node_name,
+                    "OpType": op_type,
+                    "OutputDtype": output_info_list[0].dtype,  # First entry in the list
+                    "OutputShape": output_info_list[0].shape,  # First entry in the list
                 }
-                writer.writerow(row_data_empty)
+                writer.writerow(row_data_first)
+
+                # Write subsequent rows with empty strings for NodeName and OpType
+                for output_dtype, output_shape in output_info_list[1:]:
+                    row_data_empty = {
+                        "NodeName": "",
+                        "OpType": "",
+                        "OutputDtype": output_dtype,
+                        "OutputShape": output_shape,
+                    }
+                    writer.writerow(row_data_empty)
     print(f"Model info written to {csv_file_path}")
 
 
@@ -464,18 +465,6 @@ def check_onnx(model: onnx.ModelProto, model_check_inputs=None):
 def check_point(model: onnx.ModelProto):
     """Imports an ONNX model checkpoint into a Graphsurgeon graph representation."""
     return gs.import_onnx(model)
-
-
-def is_converged(model: onnx.ModelProto, graph_ckpt, iter: int) -> bool:
-    """Checks if the model optimization has converged by comparing the current graph to the checkpoint."""
-    logger.debug(f"optimization iter: {iter}")
-    graph = gs.import_onnx(model)
-    if graph == graph_ckpt:
-        print(f"converged at iter: {iter}")
-        return None
-    else:
-        graph_ckpt = graph
-        return False
 
 
 def save(
