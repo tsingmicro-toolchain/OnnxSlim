@@ -16,6 +16,30 @@ from onnxslim.third_party.onnx_graphsurgeon.logger.logger import G_LOGGER
 
 logger = logging.getLogger("onnxslim")
 
+import ml_dtypes
+from onnx.mapping import TensorDtypeMap
+
+TENSOR_TYPE_MAP = {}
+
+candidates = [
+    ("BFLOAT16", "bfloat16", "UINT16"),
+    ("FLOAT8E4M3FN", "float8_e4m3fn", "UINT8"),
+    ("FLOAT8E4M3FNUZ", "float8_e4m3fnuz", "UINT8"),
+    ("FLOAT8E5M2", "float8_e5m2", "UINT8"),
+    ("FLOAT8E5M2FNUZ", "float8_e5m2fnuz", "UINT8"),
+    ("UINT4", "uint4", "INT32"),
+    ("INT4", "int4", "INT32"),
+    ("FLOAT4E2M1", "float4_e2m1fn", "UINT8"),
+]
+
+for onnx_name, ml_name, storage_name in candidates:
+    if hasattr(onnx.TensorProto, onnx_name) and hasattr(ml_dtypes, ml_name):
+        TENSOR_TYPE_MAP[int(getattr(onnx.TensorProto, onnx_name))] = TensorDtypeMap(
+            np.dtype(getattr(ml_dtypes, ml_name)),
+            int(getattr(onnx.TensorProto, storage_name)),
+            f"TensorProto.{onnx_name}",
+        )
+
 
 def init_logging(verbose=False):
     """Configure the logging settings for the application based on the verbosity level."""
@@ -71,7 +95,15 @@ def format_bytes(size: Union[int, Tuple[int, ...]]) -> str:
 
 def onnx_dtype_to_numpy(onnx_dtype: int) -> np.dtype:
     """Maps an ONNX dtype to its corresponding NumPy dtype."""
-    return np.dtype(helper.tensor_dtype_to_np_dtype(onnx_dtype))
+    tensor_dtype = TENSOR_TYPE_MAP.get(onnx_dtype)
+
+    if tensor_dtype:
+        return tensor_dtype.np_dtype
+
+    if onnx_dtype in onnx.helper.get_all_tensor_dtypes():
+        return np.dtype(helper.tensor_dtype_to_np_dtype(onnx_dtype))
+
+    return "UNDEFINED"
 
 
 def gen_onnxruntime_input_data(
@@ -334,11 +366,7 @@ class TensorInfo:
 
     def _extract_info(self, tensor):
         """Extract the data type and shape of an ONNX tensor."""
-        self.dtype = (
-            onnx.helper.tensor_dtype_to_np_dtype(tensor.type.tensor_type.elem_type)
-            if tensor.type.tensor_type.elem_type in onnx.helper.get_all_tensor_dtypes()
-            else "Unknown"
-        )
+        self.dtype = onnx_dtype_to_numpy(tensor.type.tensor_type.elem_type)
         shape = None
         if tensor.type.tensor_type.HasField("shape"):
             shape = []
@@ -530,24 +558,51 @@ def check_result(raw_onnx_output, slimmed_onnx_output):
     return True
 
 
-data_type_sizes = {
-    onnx.TensorProto.FLOAT: 4,
-    onnx.TensorProto.DOUBLE: 8,
-    onnx.TensorProto.INT32: 4,
-    onnx.TensorProto.INT64: 8,
-    onnx.TensorProto.UINT8: 1,
-    onnx.TensorProto.INT8: 1,
-    onnx.TensorProto.UINT16: 2,
-    onnx.TensorProto.INT16: 2,
-    onnx.TensorProto.BOOL: 1,
-}
+def get_numpy_type(onnx_type):
+    if not isinstance(onnx_type, int):
+        # Already a NumPy type
+        return onnx_type
+
+    numpy_unsupported_types = [
+        onnx.TensorProto.BFLOAT16,
+        onnx.TensorProto.FLOAT8E4M3FN,
+        onnx.TensorProto.FLOAT8E4M3FNUZ,
+        onnx.TensorProto.FLOAT8E5M2,
+        onnx.TensorProto.FLOAT8E5M2FNUZ,
+    ]
+
+    # TENSOR_TYPE_TO_NP_TYPE maps types unsupported by NumPy to random other types.
+    # This obviously breaks things, so we need to treat this as a special case.
+    if onnx_type not in numpy_unsupported_types and onnx_type in onnx.helper.get_all_tensor_dtypes():
+        return onnx.helper.tensor_dtype_to_np_dtype(onnx_type)
+    return None
+
+
+def get_itemsize(dtype):
+    np_dtype = get_numpy_type(dtype)
+    if np_dtype is not None:
+        return np.dtype(np_dtype).itemsize
+
+    if dtype == onnx.TensorProto.BFLOAT16:
+        return 2
+
+    if dtype in [
+        onnx.TensorProto.FLOAT8E4M3FN,
+        onnx.TensorProto.FLOAT8E4M3FNUZ,
+        onnx.TensorProto.FLOAT8E5M2,
+        onnx.TensorProto.FLOAT8E5M2FNUZ,
+    ]:
+        return 1
+
+    print(dtype)
+    raise
 
 
 def calculate_tensor_size(tensor):
     """Calculates the size of an ONNX tensor in bytes based on its shape and data type size."""
     shape = tensor.dims
     num_elements = np.prod(shape) if shape else 0
-    element_size = data_type_sizes.get(tensor.data_type, 0)
+    element_size = get_itemsize(tensor.data_type)
     return num_elements * element_size
 
 
