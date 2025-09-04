@@ -14,8 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-from typing import Union
+from __future__ import annotations
 
 from onnxslim.third_party.onnx_graphsurgeon.ir.graph import Constant, Graph, Node
 from onnxslim.third_party.onnx_graphsurgeon.logger import G_LOGGER
@@ -169,7 +168,7 @@ class GraphPattern:
     def add(
         self,
         name: str,
-        op: Union["GraphPattern", str],
+        op: GraphPattern | str,
         check_func=None,
         inputs=None,
         num_output_tensors=1,
