@@ -114,10 +114,17 @@ class PatternMatcher:
         """Retrieve the match point node from the pattern dictionary based on output node input names."""
         return self.pattern_dict[self.pattern_dict[self.output_names[0]].input_names[0]]
 
+    def reset_input(self):
+        for k, v in self.pattern_dict.items():
+            if v.op == "input":
+                if hasattr(self, v.name):
+                    delattr(self, v.name)
+
     def match(self, node):
         """Match a given node to a pattern by comparing input names with the match point node from the pattern
         dictionary.
         """
+        self.reset_input()
         match_point = self.get_match_point()
 
         def match_(node, pattern_node):
@@ -125,8 +132,14 @@ class PatternMatcher:
             dictionary.
             """
             if pattern_node.op == "input":
-                return True
-
+                if hasattr(self, pattern_node.name):
+                    if getattr(self, pattern_node.name) == node:
+                        return True
+                    else:
+                        return False
+                else:
+                    setattr(self, pattern_node.name, node)
+                    return True
             # node is an input variable
             if not hasattr(node, "op"):
                 return False
