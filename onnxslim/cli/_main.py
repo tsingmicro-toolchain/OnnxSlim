@@ -1,112 +1,94 @@
-from typing import Union
+from __future__ import annotations
 
 import onnx
-from loguru import logger
+
+from onnxslim.argparser import OnnxSlimKwargs
 
 
-def slim(
-    model: Union[str, onnx.ModelProto],
-    output_model: str = None,
-    model_check: bool = False,
-    input_shapes: str = None,
-    outputs: str = None,
-    no_shape_infer: bool = False,
-    no_constant_folding: bool = False,
-    dtype: str = None,
-    skip_fusion_patterns: str = None,
-    inspect: bool = False,
-    dump_to_disk: bool = False,
-    save_as_external_data: bool = False,
-    model_check_inputs: str = None,
-):
-    """
-    Slims down or optimizes an ONNX model.
-
-    Args:
-        model (Union[str, onnx.ModelProto]): The ONNX model to be slimmed. It can be either a file path or an `onnx.ModelProto` object.
-
-        output_model (str, optional): File path to save the slimmed model. If None, the model will not be saved.
-
-        model_check (bool, optional): Flag indicating whether to perform model checking. Default is False.
-
-        input_shapes (str, optional): String representing the input shapes. Default is None.
-
-        outputs (str, optional): String representing the outputs. Default is None.
-
-        no_shape_infer (bool, optional): Flag indicating whether to perform shape inference. Default is False.
-
-        no_constant_folding (bool, optional): Flag indicating whether to perform constant folding. Default is False.
-
-        dtype (str, optional): Data type. Default is None.
-
-        skip_fusion_patterns (str, optional): String representing fusion patterns to skip. Default is None.
-
-        inspect (bool, optional): Flag indicating whether to inspect the model. Default is False.
-
-        dump_to_disk (bool, optional): Flag indicating whether to dump the model detail to disk. Default is False.
-
-        save_as_external_data (bool, optional): Flag indicating whether to split onnx as model and weight. Default is False.
-
-    Returns:
-        onnx.ModelProto/None: If `output_model` is None, return slimmed model else return None.
-    """
+def slim(model: str | onnx.ModelProto | list[str | onnx.ModelProto], *args, **kwargs: OnnxSlimKwargs):
     import os
     import time
     from pathlib import Path
 
-    from onnxslim.core.slim import (
+    from onnxslim.core import (
+        OptimizationSettings,
+        convert_data_format,
+        freeze,
+        input_modification,
+        input_shape_modification,
+        optimize,
+        output_modification,
+        shape_infer,
+    )
+    from onnxslim.utils import (
+        TensorInfo,
         check_onnx,
         check_point,
         check_result,
-        convert_data_format,
-        freeze,
-        init_logging,
-        input_shape_modification,
-        model_save_as_external_data,
-        optimize,
-        output_modification,
-        save,
-        shape_infer,
-        summarize_model,
-    )
-
-    from ..utils.utils import (
         dump_model_info_to_disk,
+        init_logging,
         onnxruntime_inference,
         print_model_info_as_table,
+        save,
+        summarize_model,
+        update_outputs_dims,
     )
 
-    init_logging(1)
+    output_model = args[0] if len(args) > 0 else kwargs.get("output_model", None)
+    model_check = kwargs.get("model_check", False)
+    input_shapes = kwargs.get("input_shapes", None)
+    inputs = kwargs.get("inputs", None)
+    outputs = kwargs.get("outputs", None)
+    no_shape_infer = kwargs.get("no_shape_infer", False)
+    skip_optimizations = kwargs.get("skip_optimizations", None)
+    dtype = kwargs.get("dtype", None)
+    skip_fusion_patterns = kwargs.get("skip_fusion_patterns", None)
+    size_threshold = kwargs.get("size_threshold", None)
+    size_threshold = int(size_threshold) if size_threshold else None
+    kwargs.get("inspect", False)
+    dump_to_disk = kwargs.get("dump_to_disk", False)
+    save_as_external_data = kwargs.get("save_as_external_data", False)
+    model_check_inputs = kwargs.get("model_check_inputs", None)
+    verbose = kwargs.get("verbose", False)
 
-    MAX_ITER = (
-        10
-        if not os.getenv("ONNXSLIM_MAX_ITER")
-        else int(os.getenv("ONNXSLIM_MAX_ITER"))
-    )
+    logger = init_logging(verbose)
 
-    if isinstance(model, str):
-        model_name = Path(model).name
-        model = onnx.load(model)
-    else:
-        model = model
-        model_name = "ONNX_Model"
-
-    freeze(model)
+    MAX_ITER = int(os.getenv("ONNXSLIM_MAX_ITER")) if os.getenv("ONNXSLIM_MAX_ITER") else 10
 
     start_time = time.time()
 
-    if save_as_external_data:
-        model_save_as_external_data(model, output_model)
-        return None
+    def get_info(model, inspect=False):
+        if isinstance(model, str):
+            model_name = Path(model).name
+            model = onnx.load(model)
+        else:
+            model_name = "OnnxModel"
 
-    if output_model or inspect:
-        float_info = summarize_model(model)
+        freeze(model)
 
-    if inspect:
-        print_model_info_as_table(model_name, [float_info])
+        if not inspect:
+            return model_name, model
+
+        model_info = summarize_model(model, model_name)
+
+        return model_info
+
+    if isinstance(model, list):
+        model_info_list = [get_info(m, inspect=True) for m in model]
+
         if dump_to_disk:
-            dump_model_info_to_disk(model_name, float_info)
-        return None
+            [dump_model_info_to_disk(info) for info in model_info_list]
+
+        print_model_info_as_table(model_info_list)
+
+        return
+    else:
+        model_name, model = get_info(model)
+        if output_model:
+            original_info = summarize_model(model, model_name)
+
+    if inputs:
+        model = input_modification(model, inputs)
 
     if input_shapes:
         model = input_shape_modification(model, input_shapes)
@@ -115,17 +97,21 @@ def slim(
         model = output_modification(model, outputs)
 
     if model_check:
-        input_data_dict, raw_onnx_output = check_onnx(model, model_check_inputs)
+        input_data_dict, raw_onnx_output, model = check_onnx(model, model_check_inputs)
+
+    output_info = {TensorInfo(o).name: TensorInfo(o).shape for o in model.graph.output}
 
     if not no_shape_infer:
         model = shape_infer(model)
 
-    if not no_constant_folding:
+    OptimizationSettings.reset(skip_optimizations)
+    if OptimizationSettings.enabled():
         graph_check_point = check_point(model)
         while MAX_ITER > 0:
             logger.debug(f"iter: {MAX_ITER}")
-            model = optimize(model, skip_fusion_patterns)
-            model = shape_infer(model)
+            model = optimize(model, skip_fusion_patterns, size_threshold)
+            if not no_shape_infer:
+                model = shape_infer(model)
             graph = check_point(model)
             if graph == graph_check_point:
                 logger.debug(f"converged at iter: {MAX_ITER}")
@@ -138,150 +124,60 @@ def slim(
     if dtype:
         model = convert_data_format(model, dtype)
 
+    model = update_outputs_dims(model, output_dims=output_info)
+
     if model_check:
-        slimmed_onnx_output = onnxruntime_inference(model, input_data_dict)
-        check_result(raw_onnx_output, slimmed_onnx_output)
+        slimmed_onnx_output, model = onnxruntime_inference(model, input_data_dict)
+        if not check_result(raw_onnx_output, slimmed_onnx_output):
+            return None
 
     if not output_model:
         return model
-    else:
-        slimmed_info = summarize_model(model)
-        save(model, output_model, model_check)
-        if slimmed_info["model_size"] >= onnx.checker.MAXIMUM_PROTOBUF:
-            model_size = model.ByteSize()
-            slimmed_info["model_size"] = [model_size, slimmed_info["model_size"]]
-        end_time = time.time()
-        elapsed_time = end_time - start_time
 
-        print_model_info_as_table(
-            model_name,
-            [float_info, slimmed_info],
-            elapsed_time,
-        )
+    slimmed_info = summarize_model(model, output_model)
+    save(model, output_model, model_check, save_as_external_data, slimmed_info)
+
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print_model_info_as_table(
+        [original_info, slimmed_info],
+        elapsed_time,
+    )
 
 
 def main():
-    import argparse
-
-    import onnxslim
-
-    parser = argparse.ArgumentParser(
-        description="OnnxSlim: A Toolkit to Help Optimizer Onnx Model",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    parser.add_argument("input_model", help="input onnx model")
-    parser.add_argument(
-        "output_model", nargs="?", default=None, help="output onnx model"
+    """Entry point for the OnnxSlim toolkit, processes command-line arguments and passes them to the slim function."""
+    from onnxslim.argparser import (
+        CheckerArguments,
+        ModelArguments,
+        ModificationArguments,
+        OnnxSlimArgumentParser,
+        OptimizationArguments,
     )
 
-    parser.add_argument("--model_check", action="store_true", help="enable model check")
-    parser.add_argument(
-        "-v", "--version", action="version", version=onnxslim.__version__
+    argument_parser = OnnxSlimArgumentParser(
+        ModelArguments, OptimizationArguments, ModificationArguments, CheckerArguments
     )
+    model_args, optimization_args, modification_args, checker_args = argument_parser.parse_args_into_dataclasses()
 
-    # Input Shape Modification
-    parser.add_argument(
-        "--input_shapes",
-        nargs="+",
-        type=str,
-        help="input shape of the model, INPUT_NAME:SHAPE, e.g. x:1,3,224,224 or x1:1,3,224,224 x2:1,3,224,224",
-    )
-    # Output Modification
-    parser.add_argument(
-        "--outputs",
-        nargs="+",
-        type=str,
-        help="output of the model, OUTPUT_NAME:DTYPE, e.g. y:fp32 or y1:fp32 y2:fp32. \
-                                                                             If dtype is not specified, the dtype of the output will be the same as the original model \
-                                                                             if it has dtype, otherwise it will be fp32, available dtype: fp16, fp32, int32",
-    )
-    # Shape Inference
-    parser.add_argument(
-        "--no_shape_infer",
-        action="store_true",
-        help="whether to disable shape_infer, default false.",
-    )
+    if not checker_args.inspect and checker_args.dump_to_disk:
+        argument_parser.error("dump_to_disk can only be used with --inspect")
 
-    # Constant Folding
-    parser.add_argument(
-        "--no_constant_folding",
-        action="store_true",
-        help="whether to disable constant_folding, default false.",
-    )
+    if not optimization_args.no_shape_infer:
+        from onnxslim.utils import check_onnx_compatibility, is_onnxruntime_available
 
-    # Data Format Conversion
-    parser.add_argument(
-        "--dtype",
-        choices=["fp16", "fp32"],
-        help="convert data format to fp16 or fp32.",
-    )
-
-    parser.add_argument(
-        "--skip_fusion_patterns",
-        nargs="+",
-        choices=list(onnxslim.DEFAULT_FUSION_PATTERNS.keys()),
-        help="whether to skip the fusion of some patterns",
-    )
-
-    # Inspect Model
-    parser.add_argument(
-        "--inspect",
-        action="store_true",
-        help="inspect model, default False.",
-    )
-
-    # Dump Model Info to Disk
-    parser.add_argument(
-        "--dump_to_disk",
-        action="store_true",
-        help="dump model info to disk, default False.",
-    )
-
-    # Dump Model Info to Disk
-    parser.add_argument(
-        "--save_as_external_data",
-        action="store_true",
-        help="split onnx as model and weight, default False.",
-    )
-
-    # Model Check Inputs
-    parser.add_argument(
-        "--model_check_inputs",
-        nargs="+",
-        type=str,
-        help="Works only when model_check is enabled, Input shape of the model or numpy data path, INPUT_NAME:SHAPE or INPUT_NAME:DATAPATH, "
-        "e.g. x:1,3,224,224 or x1:1,3,224,224 x2:data.npy. Useful when input shapes are dynamic.",
-    )
-
-    args, unknown = parser.parse_known_args()
-
-    if unknown:
-        logger.error(f"unrecognized options: {unknown}")
-        return 1
-
-    if args.inspect and args.output_model:
-        parser.error("--inspect and output_model are mutually exclusive")
-
-    if not args.inspect and args.dump_to_disk:
-        parser.error("dump_to_disk can only be used with --inspect")
+        if is_onnxruntime_available():
+            check_onnx_compatibility()
 
     if args.save_as_external_data and args.output_model:
         parser.error("--save_as_external_data can only be used for single model")
 
     slim(
-        args.input_model,
-        args.output_model,
-        args.model_check,
-        args.input_shapes,
-        args.outputs,
-        args.no_shape_infer,
-        args.no_constant_folding,
-        args.dtype,
-        args.skip_fusion_patterns,
-        args.inspect,
-        args.dump_to_disk,
-        args.save_as_external_data,
-        args.model_check_inputs,
+        model_args.input_model,
+        model_args.output_model,
+        **optimization_args.__dict__,
+        **modification_args.__dict__,
+        **checker_args.__dict__,
     )
 
     return 0

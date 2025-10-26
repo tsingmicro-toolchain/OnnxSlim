@@ -1,1 +1,1 @@
-from ._main import main, slim
+from onnxslim.cli._main import main, slim

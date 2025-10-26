@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-with open("VERSION", "r") as f:
+with open("VERSION") as f:
     version = f.read().strip()
 
 with open("onnxslim/version.py", "w") as f:
@@ -9,8 +9,8 @@ with open("onnxslim/version.py", "w") as f:
 setup(
     name="onnxslim",
     version=version,
-    description="OnnxSlim: A Toolkit to Help Optimize Large Onnx Model",
-    long_description=open("README.md", "r", encoding="utf-8").read(),
+    description="OnnxSlim: A Toolkit to Help Optimize Onnx Model",
+    long_description=open("README.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/inisis/OnnxSlim",
     author="inisis",
@@ -25,7 +25,7 @@ setup(
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
     license="MIT",
-    install_requires=["loguru", "onnx"],
+    install_requires=["onnx", "sympy>=1.13.3", "packaging", "colorama", "ml_dtypes"],
     packages=find_packages(exclude=("tests", "tests.*")),
     entry_points={"console_scripts": ["onnxslim=onnxslim.cli:main"]},
     zip_safe=True,
